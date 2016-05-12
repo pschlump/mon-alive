@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-// TODO ; 0. Make this into middleware in Go-FTL
-// TODO ; 0. An URL that will send an "i-am-alive" to a item - based on get/post on URL		/api/mon/i-am-alive?itemName
-// TODO ; 0. An URL that will kill/die an "i-am-alive" to a item - based on get/post on URL -- I AM Shutting Down Now - Dead /api/mon/shutdown-now?itemName
+// done ; 0. Make this into middleware in Go-FTL
+// done ; 0. An URL that will send an "i-am-alive" to a item - based on get/post on URL		/api/mon/i-am-alive?itemName
+// done ; 0. An URL that will kill/die an "i-am-alive" to a item - based on get/post on URL -- I AM Shutting Down Now - Dead /api/mon/shutdown-now?itemName
 
 // TODO ; 1. Get list of up/down systems based on Group search -- ONLY check systesm that match the group
 // TODO ; 1. Get list groups
 
-// TODO ; 3. other methods for pinging like pub/sub in redis or query to database - maybee CLI for ping
+// done ; 3. other methods for pinging like pub/sub in redis or query to database - maybee CLI for ping
 // TODO ; 4. push notification? how - to chat bot?
 // TODO ; 5. push notification? how - to log - where it can be picked up and pushed to Twillow? / to SMS? to Email?
 // TODO ; 6. create daemon - to SIO push the monitored content out
@@ -88,6 +88,15 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	ms := lib.SVar(myStatus)
 	conn.Cmd("SET", "monitor:"+itemName, ms)
 	conn.Cmd("EXPIRE", "monitor:"+itemName, ttl)
+}
+
+// shutdown op
+func (mon *MonIt) SendIAmShutdown(itemName string) {
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	conn.Cmd("SADD", "monitor:potentialItem", itemName) // Actually monitoring this item
+	conn.Cmd("SREM", "monitor:IAmAlive", itemName)
+	conn.Cmd("DEL", "monitor:"+itemName)
 }
 
 // Create a timed I Am Alive message
@@ -224,7 +233,7 @@ func (mon *MonIt) SetConfigFromFile(fn string) {
 	}
 }
 
-// TODO: 1. get to set of "could-be-monitored-items"
+// get to set of "could-be-monitored-items"
 // URL: /api/mon/list-potential
 func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	// conn.Cmd("SADD", "monitor:potentialItem", itemName) // add to set of "could-be-monitored-items"

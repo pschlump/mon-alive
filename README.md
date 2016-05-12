@@ -1,2 +1,6 @@
 # mon-alive
-Library and tools for monitoring microservices in Go (golang) with a Redis back end
+
+Library and tools for monitoring micro-services in Go (golang) with a Redis back end
+
+License MIT
+

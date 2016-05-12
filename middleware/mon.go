@@ -94,11 +94,13 @@ func initMux(hdlr *MonAliveType) (mux *httpmux.ServeMux) {
 	mux.HandleFunc("/api/mon/get-notify-item", hdlr.closure_respGetNotifyItem()).Method("GET")
 	mux.HandleFunc("/api/mon/item-status", hdlr.closure_respItemStatus()).Method("GET")
 	mux.HandleFunc("/api/mon/get-all-item", hdlr.closure_respGetAllItem()).Method("GET")
-	mux.HandleFunc("/api/mon/add-new-item", hdlr.closure_respAddNewItem()).Method("GET")
-	mux.HandleFunc("/api/mon/rem-item", hdlr.closure_respRemItem()).Method("GET")
-	mux.HandleFunc("/api/mon/upd-config-item", hdlr.closure_respUpdConfigItem()).Method("GET")
+	mux.HandleFunc("/api/mon/add-new-item", hdlr.closure_respAddNewItem()).Method("GET", "POST")
+	mux.HandleFunc("/api/mon/rem-item", hdlr.closure_respRemItem()).Method("GET", "POST")
+	mux.HandleFunc("/api/mon/upd-config-item", hdlr.closure_respUpdConfigItem()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/list-potential", hdlr.closure_respListPotential()).Method("GET")
-	mux.HandleFunc("/api/mon/reload-config", hdlr.closure_respReloadConfig()).Method("GET")
+	mux.HandleFunc("/api/mon/reload-config", hdlr.closure_respReloadConfig()).Method("GET", "POST")
+	mux.HandleFunc("/api/mon/i-am-alive", hdlr.closure_respIAmAlive()).Method("GET", "POST")
+	mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
 
 	mux.HandleErrors(http.StatusNotFound, httpmux.HandlerFunc(errorHandlerFunc))
 	return
@@ -107,11 +109,11 @@ func initMux(hdlr *MonAliveType) (mux *httpmux.ServeMux) {
 // ----------------------------------------------------------------------------------------------------------------------------
 
 func errorHandlerFunc(ww http.ResponseWriter, req *http.Request) {
-	code := http.StatusForbidden
+	code := http.StatusBadRequest
 	ww.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	ww.Header().Set("X-Content-Type-Options", "nosniff")
 	ww.WriteHeader(code)
-	fmt.Fprintln(ww, "401 unautorized")
+	fmt.Fprintf(ww, "%d Bad Request", code)
 }
 
 type MonAliveType struct {
@@ -355,6 +357,61 @@ func (hdlr *MonAliveType) closure_respReloadConfig() func(www http.ResponseWrite
 				return
 			}
 			hdlr.mon.SetConfigFromFile(fn)
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\" }")
+
+		}
+	}
+}
+
+// set IAmAlive - call - to update status of item via wget
+// func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{}) {
+//	mux.HandleFunc("/api/mon/i-am-alive", hdlr.closure_respIAmAlive()).Method("GET", "POST")
+func (hdlr *MonAliveType) closure_respIAmAlive() func(www http.ResponseWriter, req *http.Request) {
+	return func(www http.ResponseWriter, req *http.Request) {
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+
+			trx := mid.GetTrx(rw)
+			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/i-am-alive", hdlr.Paths, 0, req.URL.Path)
+
+			itemName := rw.Ps.ByNameDflt("itemName", "")
+			if itemName == "" {
+				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
+				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
+				www.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			myStatus := make(map[string]interface{})
+			// xyzzy - additional params
+
+			hdlr.mon.SendIAmAlive(itemName, myStatus)
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\" }")
+
+		}
+	}
+}
+
+// set Shutdown - call - to update status of item via wget
+// func (mon *MonIt) SendIAmShutdown(itemName string) {
+//	mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
+func (hdlr *MonAliveType) closure_respIAmShutdown() func(www http.ResponseWriter, req *http.Request) {
+	return func(www http.ResponseWriter, req *http.Request) {
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+
+			trx := mid.GetTrx(rw)
+			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/i-am-shutdown", hdlr.Paths, 0, req.URL.Path)
+
+			itemName := rw.Ps.ByNameDflt("itemName", "")
+			if itemName == "" {
+				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
+				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
+				www.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			hdlr.mon.SendIAmShutdown(itemName)
 			SetNoCacheHeaders(www, req)
 			fmt.Fprintf(www, "{ \"status\":\"success\" }")
 
