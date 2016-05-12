@@ -2,12 +2,14 @@ package MonAliveLib
 
 import (
 	"fmt"
-	"github.com/pschlump/Go-FTL/server/lib" //	Modifed from: "encoding/json"
-	"github.com/pschlump/json"
-	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/pschlump/Go-FTL/server/lib"
+	"github.com/pschlump/godebug" //	Modifed from: "encoding/json"
+	"github.com/pschlump/json"
+	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 )
 
 // done ; 0. Make this into middleware in Go-FTL
@@ -64,10 +66,15 @@ func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	rv.MinTTL = 30
 	conn := mon.GetConn()
 	s, err := conn.Cmd("GET", "monitor:config").Str()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
 	mon.FreeConn(conn)
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration - that is not good, %s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
 	}
 	return
 }
