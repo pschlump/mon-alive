@@ -3,18 +3,17 @@ package qdemolib
 import (
 	"log"
 
-	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 )
 
 func GetRedisClient() (client *redis.Client, conFlag bool) {
 	var err error
-	client, err = redis.Dial("tcp", qdemolib.ServerGlobal.RedisConnectHost+":"+qdemolib.ServerGlobal.RedisConnectPort)
+	client, err = redis.Dial("tcp", ServerGlobal.RedisConnectHost+":"+ServerGlobal.RedisConnectPort)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if qdemolib.ServerGlobal.RedisConnectAuth != "" {
-		err = client.Cmd("AUTH", qdemolib.ServerGlobal.RedisConnectAuth).Err
+	if ServerGlobal.RedisConnectAuth != "" {
+		err = client.Cmd("AUTH", ServerGlobal.RedisConnectAuth).Err
 		if err != nil {
 			log.Fatal(err)
 		} else {

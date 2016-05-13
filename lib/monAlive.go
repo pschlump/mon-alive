@@ -93,8 +93,8 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	conn.Cmd("SADD", "monitor:IAmAlive", itemName)
 	myStatus["status"] = "ok"
 	ms := lib.SVar(myStatus)
-	conn.Cmd("SET", "monitor:"+itemName, ms)
-	conn.Cmd("EXPIRE", "monitor:"+itemName, ttl)
+	conn.Cmd("SET", "monitor::"+itemName, ms)
+	conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
 }
 
 // shutdown op
@@ -103,7 +103,7 @@ func (mon *MonIt) SendIAmShutdown(itemName string) {
 	defer mon.FreeConn(conn)
 	conn.Cmd("SADD", "monitor:potentialItem", itemName) // Actually monitoring this item
 	conn.Cmd("SREM", "monitor:IAmAlive", itemName)
-	conn.Cmd("DEL", "monitor:"+itemName)
+	conn.Cmd("DEL", "monitor::"+itemName)
 }
 
 // Create a timed I Am Alive message
@@ -160,7 +160,7 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 	}
 	// Iterate over set and check to see what keys are missing
 	for ii, vv := range it {
-		item, err := conn.Cmd("GET", "monitor:"+vv).Str()
+		item, err := conn.Cmd("GET", "monitor::"+vv).Str()
 		if err != nil {
 			rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
 		} else if item == "" {
@@ -206,22 +206,24 @@ func (mon *MonIt) GetAllItem() (rv []string) {
 
 // add an item to the set of items that is monitored
 // URL: /api/mon/add-new-item?itemName= ttl= ...
-func (mon *MonIt) AddNewItem(itemName string, ttl uint64) {
-	// xyzzy - additional params
+func (mon *MonIt) AddNewItem(itemName string, ttl uint64) { // xyzzy - additional params
 
 	conn := mon.GetConn()
 	defer mon.FreeConn(conn)
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
 	}
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	var rv ConfigMonitor
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
 	}
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	if vv, ok := rv.Item[itemName]; ok {
 		vv.TTL = ttl
 	} else {
@@ -235,12 +237,18 @@ func (mon *MonIt) AddNewItem(itemName string, ttl uint64) {
 		}
 	}
 
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	s = lib.SVar(rv)
-	err = conn.Cmd("SET", "monitor:config").Err
+	if db2 {
+		s = lib.SVarI(rv)
+	}
+	// fmt.Printf("AT: %s, s=>%s<\n", godebug.LF(), lib.SVarI(rv))
+	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
 	}
+	// fmt.Printf("AT: %s\n", godebug.LF())
 
 }
 
@@ -265,7 +273,10 @@ func (mon *MonIt) RemoveItem(itemName string) {
 	}
 
 	s = lib.SVar(rv)
-	err = conn.Cmd("SET", "monitor:config").Err
+	if db2 {
+		s = lib.SVarI(rv)
+	}
+	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
@@ -320,7 +331,10 @@ func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]inter
 	}
 
 	s = lib.SVar(rv)
-	err = conn.Cmd("SET", "monitor:config").Err
+	if db2 {
+		s = lib.SVarI(rv)
+	}
+	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
@@ -353,3 +367,4 @@ func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 }
 
 const db1 = false
+const db2 = false

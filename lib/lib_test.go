@@ -6,6 +6,7 @@
 package MonAliveLib
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -20,11 +21,26 @@ func Test_MonAliveLib(t *testing.T) {
 		cmd      string
 		expect   string
 		itemName string
+		ttl      uint64
+		chk      string
 	}{
+		// 0
 		{
 			cmd:      "SendIAmAlive",
-			expect:   `?TODO?`,
 			itemName: `bob`,
+			chk:      "no-conf",
+		},
+		// 1
+		{
+			cmd:      "AddNewItem",
+			itemName: `bob`,
+			ttl:      60,
+		},
+		// 2
+		{
+			cmd:      "SendIAmAlive",
+			itemName: `bob`,
+			chk:      "conf",
 		},
 	}
 
@@ -44,11 +60,24 @@ func Test_MonAliveLib(t *testing.T) {
 		switch test.cmd {
 		case "SendIAmAlive":
 			myStatus := make(map[string]interface{})
+			myStatus["status"] = "ok"
 			mon.SendIAmAlive(test.itemName, myStatus)
-			err := conn.Cmd("GET", "monitor:bob").Err
-			if err != nil {
-				t.Errorf("Test %2d, Expected to find a key - did not\n", ii)
+			s, err := conn.Cmd("GET", "monitor::bob").Str()
+			if test.chk == "no-conf" {
+				if err == nil {
+					t.Errorf("Test %2d, Should not find key, did - not configured yet\n", ii)
+				}
 			}
+			if test.chk == "conf" {
+				if err != nil {
+					t.Errorf("Test %2d, missing configured item in Reids\n", ii)
+				}
+			}
+			if db50 {
+				fmt.Printf("s= >%s<\n", s)
+			}
+		case "AddNewItem":
+			mon.AddNewItem(test.itemName, test.ttl)
 		default:
 			t.Errorf("Test %2d,  invalid test case, %s\n", ii, test.cmd)
 		}
@@ -57,12 +86,10 @@ func Test_MonAliveLib(t *testing.T) {
 }
 
 /*
-func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{}) {
 func (mon *MonIt) SendIAmShutdown(itemName string) {
 func (mon *MonIt) GetNotifyItem() (rv []string) {
 func (mon *MonIt) GetItemStatus() (rv []ItemStatus) {
 func (mon *MonIt) GetAllItem() (rv []string) {
-func (mon *MonIt) AddNewItem(itemName string, ttl uint64) {
 func (mon *MonIt) RemoveItem(itemName string) {
 func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]interface{}) {
 func (mon *MonIt) SetConfigFromFile(fn string) {
@@ -77,5 +104,7 @@ func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	// mon.SendPeriodicIAmAlive("Go-FTL")
 	_ = mon
 */
+
+const db50 = false
 
 /* vim: set noai ts=4 sw=4: */

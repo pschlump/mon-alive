@@ -57,8 +57,7 @@ func main() {
 			fmt.Printf("Error: %s getting configuration - may be empty/not-set\n", err)
 			return
 		}
-
-		ioutil.WriteFile(*DumpFn, []byte(s), 0600)
+		ioutil.WriteFile(*DumpFn, []byte(s+"\n"), 0600)
 		if err != nil {
 			fmt.Printf("Error: %s writing %s\n", err, *DumpFn)
 			return
