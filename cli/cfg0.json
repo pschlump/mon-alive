@@ -1,0 +1,12 @@
+{
+	"Item":{
+		"chat-bot":{
+			"Name":"chat bot for chat demo"
+		,	"TTL": 60
+		}
+		,"go-ftl@192.168.0.157:16001":{
+			"Name":"chat bot server"
+		,	"TTL": 60
+		}
+	}
+}

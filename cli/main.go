@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/pschlump/godebug"
 	"github.com/pschlump/mon-alive/lib"
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
@@ -15,10 +16,10 @@ import (
 var Debug = flag.Bool("debug", false, "Debug flag")                      // 0
 var Cfg = flag.String("cfg", "../global_cfg.json", "Configuration file") // 1
 var LoadFn = flag.String("load", "", "Configuraiton file to load")       // 2
-var DumpFn = flag.String("load", "", "Dump configration to file")        // 3
+var DumpFn = flag.String("dump", "", "Dump configration to file")        // 3
 func init() {
 	flag.BoolVar(Debug, "D", false, "Debug flag")                             // 0
-	flag.StringVar(Cfg, "c", "", "Configuration file")                        // 1
+	flag.StringVar(Cfg, "c", "../global_cfg.json", "Configuration file")      // 1
 	flag.StringVar(LoadFn, "l", "", "Configuraiton file to load")             // 2
 	flag.StringVar(DumpFn, "d", "", "Dump configration to file to listen to") // 3
 }
@@ -60,19 +61,25 @@ func main() {
 
 	conn, conFlag := RedisClient()
 	if !conFlag {
-		// xyzzy - report error
+		fmt.Printf("Did not connect to redis\n")
+		os.Exit(1)
 	}
+	fmt.Printf("At: %s isNil(conn)=%v\n", godebug.LF(), conn == nil)
 
-	mon := MonAliveLib.NewMonIt(func() (conn *redis.Client) { return conn }, func(conn *redis.Client) {})
+	mon := MonAliveLib.NewMonIt(func() *redis.Client {
+		fmt.Printf("At: %s isNil(conn)=%v\n", godebug.LF(), conn == nil)
+		return conn
+	}, func(conn *redis.Client) {})
 
 	if *LoadFn != "" {
+		fmt.Printf("At: %s\n", godebug.LF())
 		mon.SetConfigFromFile(*LoadFn)
 	}
 	if *DumpFn != "" {
 
 		s, err := conn.Cmd("GET", "monitor:config").Str()
 		if err != nil {
-			fmt.Printf("Error: %s seting configuration  - File: %s\n", err, *DumpFn)
+			fmt.Printf("Error: %s getting configuration - may be empty/not-set\n", err)
 			return
 		}
 
