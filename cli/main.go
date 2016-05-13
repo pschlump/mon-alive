@@ -4,10 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
-	"github.com/pschlump/godebug"
 	"github.com/pschlump/mon-alive/lib"
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
@@ -22,25 +20,6 @@ func init() {
 	flag.StringVar(Cfg, "c", "../global_cfg.json", "Configuration file")      // 1
 	flag.StringVar(LoadFn, "l", "", "Configuraiton file to load")             // 2
 	flag.StringVar(DumpFn, "d", "", "Dump configration to file to listen to") // 3
-}
-
-func RedisClient() (client *redis.Client, conFlag bool) {
-	var err error
-	client, err = redis.Dial("tcp", qdemolib.ServerGlobal.RedisConnectHost+":"+qdemolib.ServerGlobal.RedisConnectPort)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if qdemolib.ServerGlobal.RedisConnectAuth != "" {
-		err = client.Cmd("AUTH", qdemolib.ServerGlobal.RedisConnectAuth).Err
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			conFlag = true
-		}
-	} else {
-		conFlag = true
-	}
-	return
 }
 
 func main() {
@@ -59,20 +38,16 @@ func main() {
 
 	qdemolib.SetupRedisForTest(*Cfg)
 
-	conn, conFlag := RedisClient()
+	conn, conFlag := qdemolib.GetRedisClient()
 	if !conFlag {
 		fmt.Printf("Did not connect to redis\n")
 		os.Exit(1)
 	}
-	fmt.Printf("At: %s isNil(conn)=%v\n", godebug.LF(), conn == nil)
 
-	mon := MonAliveLib.NewMonIt(func() *redis.Client {
-		fmt.Printf("At: %s isNil(conn)=%v\n", godebug.LF(), conn == nil)
-		return conn
-	}, func(conn *redis.Client) {})
+	mon := MonAliveLib.NewMonIt(func() *redis.Client { return conn }, func(conn *redis.Client) {})
 
 	if *LoadFn != "" {
-		fmt.Printf("At: %s\n", godebug.LF())
+		// fmt.Printf("At: %s\n", godebug.LF())
 		mon.SetConfigFromFile(*LoadFn)
 	}
 	if *DumpFn != "" {

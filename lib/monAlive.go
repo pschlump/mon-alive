@@ -333,14 +333,13 @@ func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]inter
 func (mon *MonIt) SetConfigFromFile(fn string) {
 	s, err := ioutil.ReadFile(fn)
 	if err != nil {
-		fmt.Printf("Error: %s reading %s\n", err, fn)
 		return
 	}
 	conn := mon.GetConn()
 	err = conn.Cmd("SET", "monitor:config", s).Err
 	mon.FreeConn(conn)
 	if err != nil {
-		fmt.Printf("Error: %s seting configuration  - File: %s\n", err, fn)
+		fmt.Printf("Error: %s seting configuration - File: %s\n", err, fn)
 		return
 	}
 }
@@ -349,7 +348,7 @@ func (mon *MonIt) SetConfigFromFile(fn string) {
 // URL: /api/mon/list-potential
 func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	// conn.Cmd("SADD", "monitor:potentialItem", itemName) // add to set of "could-be-monitored-items"
-	// xyzzy
+	// xyzzy TODO:
 	return
 }
 
