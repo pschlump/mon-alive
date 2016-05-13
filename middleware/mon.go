@@ -80,6 +80,7 @@ func init() {
 			"/api/mon/reload-config",
 			//	"/api/mon/i-am-alive",
 			// 	"/api/mon/i-am-shutdown",
+			//	"/api/mon/i-failed",
 		}
 		return rv
 	}
@@ -114,6 +115,7 @@ func initMux(hdlr *MonAliveType) (mux *httpmux.ServeMux) {
 	mux.HandleFunc("/api/mon/reload-config", hdlr.closure_respReloadConfig()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-am-alive", hdlr.closure_respIAmAlive()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
+	mux.HandleFunc("/api/mon/i-failed", hdlr.closure_respIFailed()).Method("GET", "POST")
 
 	mux.HandleErrors(http.StatusNotFound, httpmux.HandlerFunc(errorHandlerFunc))
 	return
@@ -275,6 +277,7 @@ func (hdlr *MonAliveType) closure_respAddNewItem() func(www http.ResponseWriter,
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -282,6 +285,7 @@ func (hdlr *MonAliveType) closure_respAddNewItem() func(www http.ResponseWriter,
 			}
 			sTtl := rw.Ps.ByNameDflt("ttl", "")
 			if sTtl == "" {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'ttl' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - missing 'ttl' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -290,6 +294,7 @@ func (hdlr *MonAliveType) closure_respAddNewItem() func(www http.ResponseWriter,
 			ttl, err := strconv.ParseInt(sTtl, 10, 64)
 			// if err == nil || ttl < hdlr.mon.MinTTL {
 			if err == nil || ttl < 30 {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - invalid 'ttl' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - invalid 'ttl' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -319,6 +324,7 @@ func (hdlr *MonAliveType) closure_respRemItem() func(www http.ResponseWriter, re
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -363,6 +369,7 @@ func (hdlr *MonAliveType) closure_respUpdConfigItem() func(www http.ResponseWrit
 			ttl, err := strconv.ParseInt(sTtl, 10, 64)
 			// if err == nil || ttl < hdlr.MinTTL {
 			if err == nil || ttl < 30 {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - invalid 'ttl' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - invalid 'ttl' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -438,6 +445,7 @@ func (hdlr *MonAliveType) closure_respIAmAlive() func(www http.ResponseWriter, r
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -471,6 +479,7 @@ func (hdlr *MonAliveType) closure_respIAmShutdown() func(www http.ResponseWriter
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
+				// xyzzy
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/reload-config - missing 'iteitemName' parameter")
 				www.WriteHeader(http.StatusBadRequest)
@@ -478,6 +487,36 @@ func (hdlr *MonAliveType) closure_respIAmShutdown() func(www http.ResponseWriter
 			}
 
 			hdlr.mon.SendIAmShutdown(itemName)
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\" }")
+
+		}
+	}
+}
+
+// set Failed - call - application knows that it failed and it should be monitiroed
+// func (mon *MonIt) SendIFailed(itemName string) {
+//	mux.HandleFunc("/api/mon/i-failed", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
+func (hdlr *MonAliveType) closure_respIFailed() func(www http.ResponseWriter, req *http.Request) {
+	return func(www http.ResponseWriter, req *http.Request) {
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+
+			trx := mid.GetTrx(rw)
+			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/i-failed", hdlr.Paths, 0, req.URL.Path)
+
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			itemName := rw.Ps.ByNameDflt("itemName", "")
+			if itemName == "" {
+				fmt.Fprintf(os.Stderr, "%s/api/mon/i-failed - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
+				logrus.Errorf("/api/mon/i-failed - missing 'iteitemName' parameter")
+				www.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			hdlr.mon.SendIFailed(itemName)
 			SetNoCacheHeaders(www, req)
 			fmt.Fprintf(www, "{ \"status\":\"success\" }")
 

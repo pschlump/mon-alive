@@ -97,13 +97,34 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
 }
 
-// shutdown op
+// shutdown op -- intentionally shutdown - means no notificaiton
 func (mon *MonIt) SendIAmShutdown(itemName string) {
 	conn := mon.GetConn()
 	defer mon.FreeConn(conn)
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	conn.Cmd("SADD", "monitor:potentialItem", itemName) // Actually monitoring this item
+	// fmt.Printf("AT: %s\n", godebug.LF())
 	conn.Cmd("SREM", "monitor:IAmAlive", itemName)
-	conn.Cmd("DEL", "monitor::"+itemName)
+	// fmt.Printf("AT: %s\n", godebug.LF())
+	err := conn.Cmd("DEL", "monitor::"+itemName).Err
+	// fmt.Printf("AT: %s, Del on monitor::%s -- err=%s\n", godebug.LF(), itemName, err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		return
+	}
+}
+
+// shutdown op -- I know that I have failed - I should be up but I have AbEnded
+func (mon *MonIt) SendIFailed(itemName string) {
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	// fmt.Printf("AT: %s\n", godebug.LF())
+	err := conn.Cmd("DEL", "monitor::"+itemName).Err
+	// fmt.Printf("AT: %s, Del on monitor::%s -- err=%s\n", godebug.LF(), itemName, err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		return
+	}
 }
 
 // Create a timed I Am Alive message
@@ -161,16 +182,29 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 	// Iterate over set and check to see what keys are missing
 	for ii, vv := range it {
 		item, err := conn.Cmd("GET", "monitor::"+vv).Str()
+		// fmt.Printf("GET monitor::%s, err=%s item=%s, %s\n", vv, err, item, godebug.LF())
 		if err != nil {
-			rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
+			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
+			rv = append(rv, vv)
 		} else if item == "" {
-			rv = append(rv, fmt.Sprintf("Item: %s - not founds\n", vv))
+			fmt.Sprintf("Item: %s - not founds\n", vv)
 		} else {
-			fmt.Printf("Found %s at %d in set - it's ok\n", vv, ii)
+			if db3 {
+				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
+			}
 			// do nothing - it's ok
 		}
 	}
 	return
+}
+
+func StatusOf(itemName string, allStat []ItemStatus) (rv string) {
+	for _, vv := range allStat {
+		if vv.Name == itemName {
+			return vv.Up
+		}
+	}
+	return "up" // keep positive in uncertain times
 }
 
 type ItemStatus struct {
@@ -269,6 +303,7 @@ func (mon *MonIt) RemoveItem(itemName string) {
 		return
 	}
 	if _, ok := rv.Item[itemName]; ok {
+		// fmt.Printf("AT: %s -- remvoing item %s\n", godebug.LF(), itemName)
 		delete(rv.Item, itemName)
 	}
 
@@ -279,6 +314,12 @@ func (mon *MonIt) RemoveItem(itemName string) {
 	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+
+	err = conn.Cmd("DEL", "monitor::"+itemName).Err
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
 		return
 	}
 
@@ -366,5 +407,18 @@ func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	return
 }
 
+func (mon *MonIt) GetConfig() (s string) {
+	var err error
+	conn := mon.GetConn()
+	s, err = conn.Cmd("GET", "monitor:config").Str()
+	mon.FreeConn(conn)
+	if err != nil {
+		fmt.Printf("Error: %s getting configuration - may be empty/not-set\n", err)
+		return
+	}
+	return
+}
+
 const db1 = false
 const db2 = false
+const db3 = false
