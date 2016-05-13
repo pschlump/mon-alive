@@ -69,11 +69,24 @@ func init() {
 	createEmptyType := func() interface{} {
 		rv := &MonAliveType{}
 		rv.mux = initMux(rv)
+		rv.LoginRequired = []string{
+			"/api/mon/get-notify-item",
+			"/api/mon/item-status",
+			"/api/mon/get-all-item",
+			"/api/mon/add-new-item",
+			"/api/mon/rem-item",
+			"/api/mon/upd-config-item",
+			"/api/mon/list-potential",
+			"/api/mon/reload-config",
+			//	"/api/mon/i-am-alive",
+			// 	"/api/mon/i-am-shutdown",
+		}
 		return rv
 	}
 
 	cfg.RegInitItem2("MonAliveMiddlware", initNext, createEmptyType, postInit, `{
 		"Paths":             { "type":["string","filepath"], "isarray":true, "required":true },
+		"LoginRequired":	 { "type":["string"], "isarray":true },
 		"LineNo":            { "type":[ "int" ], "default":"1" }
 		}`)
 }
@@ -117,12 +130,13 @@ func errorHandlerFunc(ww http.ResponseWriter, req *http.Request) {
 }
 
 type MonAliveType struct {
-	Next   http.Handler                //
-	Paths  []string                    // Path to respond to
-	LineNo int                         //
-	g_cfg  *cfg.ServerGlobalConfigType //
-	mon    *MonAliveLib.MonIt          //
-	mux    *httpmux.ServeMux           // for non-encrypted (regular) calls
+	Next          http.Handler                //
+	Paths         []string                    // Path to respond to
+	LoginRequired []string                    //
+	LineNo        int                         //
+	g_cfg         *cfg.ServerGlobalConfigType //
+	mon           *MonAliveLib.MonIt          //
+	mux           *httpmux.ServeMux           // for non-encrypted (regular) calls
 }
 
 func NewMonAliveMiddlwareServer(n http.Handler, p []string, prefix string, userRoles []string) *MonAliveType {
@@ -177,34 +191,54 @@ func SetNoCacheHeaders(www http.ResponseWriter, req *http.Request) {
 	www.Header().Set("Expires", "0")                                         // Proxies.
 }
 
+// TODO -= use this =-
+// Reqturn true if no login required, or if $is_logged_in$="y" and LoginRequired
+func (hdlr *MonAliveType) CheckLoginRequired(www http.ResponseWriter, rw *goftlmux.MidBuffer, req *http.Request) bool {
+	return true // TODO Remove when login is in
+	if lib.InArray(req.URL.Path, hdlr.LoginRequired) {
+		is_logged_in := rw.Ps.ByNameDflt("$is_logged_in$", "n")
+		if is_logged_in == "y" {
+			return true
+		}
+		fmt.Fprintf(os.Stderr, "%s%s - login required to access this end point %s\n", MiscLib.ColorRed, req.URL.Path, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
+		logrus.Errorf("%s - login required to access this", req.URL.Path)
+		www.WriteHeader(http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 // URL: /api/mon/get-notify-item
 // func (mon *MonIt) GetNotifyItem() (rv []string) {
 //	mux.HandleFunc("/api/mon/get-notify-item", hdlr.closure_respGetNotifyItem()).Method("GET")
 func (hdlr *MonAliveType) closure_respGetNotifyItem() func(www http.ResponseWriter, req *http.Request) {
 	return func(www http.ResponseWriter, req *http.Request) {
-		s := hdlr.mon.GetNotifyItem()
-		SetNoCacheHeaders(www, req)
-		fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			s := hdlr.mon.GetNotifyItem()
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		}
 	}
 }
-
-/*
-// URL: /api/mon/reload-config?fn=
-func (mon *MonIt) SetConfigFromFile(fn string) {
-//	mux.HandleFunc("/api/mon/add-new-item"   , hdlr.closure_respAddNewItem()).Method("GET")
-//	mux.HandleFunc("/api/mon/rem-item"       , hdlr.closure_respRemItem()).Method("GET")
-//	mux.HandleFunc("/api/mon/upd-config-item", hdlr.closure_respUpdConfigItem()).Method("GET")
-//	mux.HandleFunc("/api/mon/list-potential" , hdlr.closure_respListPotential()).Method("GET")
-*/
 
 // URL: /api/mon/item-status
 // func (mon *MonIt) GetItemStatus() (rv []ItemStatus) {
 //	mux.HandleFunc("/api/mon/item-status"    , hdlr.closure_respItemStatusItem()).Method("GET")
 func (hdlr *MonAliveType) closure_respItemStatus() func(www http.ResponseWriter, req *http.Request) {
 	return func(www http.ResponseWriter, req *http.Request) {
-		x := hdlr.mon.GetItemStatus()
-		SetNoCacheHeaders(www, req)
-		fmt.Fprintf(www, "%s", lib.SVarI(x))
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			x := hdlr.mon.GetItemStatus()
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "%s", lib.SVarI(x))
+		}
 	}
 }
 
@@ -213,9 +247,15 @@ func (hdlr *MonAliveType) closure_respItemStatus() func(www http.ResponseWriter,
 //	mux.HandleFunc("/api/mon/get-all-item"   , hdlr.closure_respGetAllItem()).Method("GET")
 func (hdlr *MonAliveType) closure_respGetAllItem() func(www http.ResponseWriter, req *http.Request) {
 	return func(www http.ResponseWriter, req *http.Request) {
-		s := hdlr.mon.GetAllItem()
-		SetNoCacheHeaders(www, req)
-		fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			s := hdlr.mon.GetAllItem()
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		}
 	}
 }
 
@@ -228,6 +268,10 @@ func (hdlr *MonAliveType) closure_respAddNewItem() func(www http.ResponseWriter,
 
 			trx := mid.GetTrx(rw)
 			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/rem-item", hdlr.Paths, 0, req.URL.Path)
+
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
@@ -269,6 +313,10 @@ func (hdlr *MonAliveType) closure_respRemItem() func(www http.ResponseWriter, re
 			trx := mid.GetTrx(rw)
 			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/rem-item", hdlr.Paths, 0, req.URL.Path)
 
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
@@ -293,6 +341,10 @@ func (hdlr *MonAliveType) closure_respUpdConfigItem() func(www http.ResponseWrit
 
 			trx := mid.GetTrx(rw)
 			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/rem-item", hdlr.Paths, 0, req.URL.Path)
+
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
@@ -333,9 +385,15 @@ func (hdlr *MonAliveType) closure_respUpdConfigItem() func(www http.ResponseWrit
 //	mux.HandleFunc("/api/mon/list-potential", hdlr.closure_respListPotential()).Method("GET")
 func (hdlr *MonAliveType) closure_respListPotential() func(www http.ResponseWriter, req *http.Request) {
 	return func(www http.ResponseWriter, req *http.Request) {
-		s := hdlr.mon.GetListOfPotentialItem()
-		SetNoCacheHeaders(www, req)
-		fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			s := hdlr.mon.GetListOfPotentialItem()
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\", \"data\": %s }", lib.SVar(s))
+		}
 	}
 }
 
@@ -374,6 +432,10 @@ func (hdlr *MonAliveType) closure_respIAmAlive() func(www http.ResponseWriter, r
 			trx := mid.GetTrx(rw)
 			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/i-am-alive", hdlr.Paths, 0, req.URL.Path)
 
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {
 				fmt.Fprintf(os.Stderr, "%s/api/mon/rem-item - missing 'itemName' paramter%s\n", MiscLib.ColorRed, mid.ErrNonMidBufferWriter, MiscLib.ColorReset)
@@ -402,6 +464,10 @@ func (hdlr *MonAliveType) closure_respIAmShutdown() func(www http.ResponseWriter
 
 			trx := mid.GetTrx(rw)
 			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/i-am-shutdown", hdlr.Paths, 0, req.URL.Path)
+
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
 
 			itemName := rw.Ps.ByNameDflt("itemName", "")
 			if itemName == "" {

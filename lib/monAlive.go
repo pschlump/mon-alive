@@ -207,20 +207,125 @@ func (mon *MonIt) GetAllItem() (rv []string) {
 // add an item to the set of items that is monitored
 // URL: /api/mon/add-new-item?itemName= ttl= ...
 func (mon *MonIt) AddNewItem(itemName string, ttl uint64) {
-	// TODO: 2.
-	// xyzzy
+	// xyzzy - additional params
+
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	s, err := conn.Cmd("GET", "monitor:config").Str()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+	var rv ConfigMonitor
+	err = json.Unmarshal([]byte(s), &rv)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+	if vv, ok := rv.Item[itemName]; ok {
+		vv.TTL = ttl
+	} else {
+		rv.Item[itemName] = ConfigItem{
+			Name: itemName,
+			TTL:  ttl,
+			// RequiresPing bool                   // To determine if it is alive requires a "ping" -- Maybe keep track of delta-t on last ping and only so often
+			// PingUrl      string                 // URL to do "get" on to ping item -- /api/status for example
+			// Group        []string               // Set of groups that this belongs to "host":"virtual-host", "host":"goftl-server"
+			// Extra        map[string]interface{} // Other Config Items...
+		}
+	}
+
+	s = lib.SVar(rv)
+	err = conn.Cmd("SET", "monitor:config").Err
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+
 }
 
 // URL: /api/mon/rem-item?itemName=
 func (mon *MonIt) RemoveItem(itemName string) {
-	// TODO: 2.
-	// xyzzy
+
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	s, err := conn.Cmd("GET", "monitor:config").Str()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+	var rv ConfigMonitor
+	err = json.Unmarshal([]byte(s), &rv)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+	if _, ok := rv.Item[itemName]; ok {
+		delete(rv.Item, itemName)
+	}
+
+	s = lib.SVar(rv)
+	err = conn.Cmd("SET", "monitor:config").Err
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+
 }
 
 // URL: /api/mon/upd-config-item?itemName=, ...
 func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]interface{}) {
-	// TODO: 2.
-	// xyzzy -- ttl, and otehr config items
+
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	s, err := conn.Cmd("GET", "monitor:config").Str()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+	var rv ConfigMonitor
+	err = json.Unmarshal([]byte(s), &rv)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+
+	ttl, ok := newConfig["TTL"].(uint64)
+	if !ok {
+		ttl = 60
+	}
+	requiresPing, ok := newConfig["RequiresPing"].(bool)
+	if !ok {
+		requiresPing = false
+	}
+	pingUrl, ok := newConfig["PingUrl"].(string)
+	if !ok {
+		requiresPing = false
+	}
+	group, ok := newConfig["Group"].([]string)
+	if !ok {
+		group = []string{}
+	}
+
+	if vv, ok := rv.Item[itemName]; ok {
+		vv.TTL = ttl
+	} else {
+		rv.Item[itemName] = ConfigItem{
+			Name:         itemName,
+			TTL:          ttl,
+			RequiresPing: requiresPing,
+			PingUrl:      pingUrl,
+			Group:        group,
+		}
+	}
+
+	s = lib.SVar(rv)
+	err = conn.Cmd("SET", "monitor:config").Err
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
+
 }
 
 // set config from file
