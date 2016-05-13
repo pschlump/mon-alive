@@ -37,16 +37,18 @@ func Test_MonAliveLib(t *testing.T) {
 	}
 	mon := NewMonIt(func() *redis.Client { return monClient }, func(conn *redis.Client) {})
 
-	for ii, test := range tests {
+	conn, _ := qdemolib.GetRedisClient()
 
-		//if b != test.expectedBody {
-		//	t.Errorf("Error %2d, reject error got: %s, expected %s\n", ii, b, test.expectedBody)
-		//}
+	for ii, test := range tests {
 
 		switch test.cmd {
 		case "SendIAmAlive":
 			myStatus := make(map[string]interface{})
 			mon.SendIAmAlive(test.itemName, myStatus)
+			err := conn.Cmd("GET", "monitor:bob").Err
+			if err != nil {
+				t.Errorf("Test %2d, Expected to find a key - did not\n", ii)
+			}
 		default:
 			t.Errorf("Test %2d,  invalid test case, %s\n", ii, test.cmd)
 		}
@@ -67,6 +69,10 @@ func (mon *MonIt) SetConfigFromFile(fn string) {
 func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	! TODO !
 * func (mon *MonIt) SendPeriodicIAmAlive(itemName string) {
+
+		//if b != test.expectedBody {
+		//	t.Errorf("Error %2d, reject error got: %s, expected %s\n", ii, b, test.expectedBody)
+		//}
 
 	// mon.SendPeriodicIAmAlive("Go-FTL")
 	_ = mon
