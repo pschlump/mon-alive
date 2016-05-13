@@ -1,3 +1,10 @@
+,r
+cli/,x
+cli/cli
+lib/,x
+lib/todo.1
+note.1
+
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
