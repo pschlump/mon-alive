@@ -7,6 +7,7 @@
 package MonAliveMiddleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,30 +23,14 @@ func Test_JsonPPathServer(t *testing.T) {
 		url          string
 		expectedBody string
 	}{
+		// 0
 		{
-			"http://example.com/img/foo.jpg",
-			`{"abc":"def"}`,
-		},
-		{
-			"http://example.com/api/status",
-			`{"abc":"def"}`,
-		},
-		{
-			"http://example.com/api/status?callback=j1232131231",
-			`j1232131231({"abc":"def"});`,
+			url: "http://example.com/api/mon/i-am-alive?itemName=fred",
 		},
 	}
 
-	//
-
-	return
-
-	//
-
-	// ct := h.Get("Content-Type")
-	// if rw.StatusCode == http.StatusOK && strings.HasPrefix(ct, "application/json") {
 	bot := mid.NewConstHandler(`{"abc":"def"}`, "Content-Type", "application/json")
-	ms := NewJSONPServer(bot, []string{"/api/status"}, `^[a-zA-Z\$_][a-zA-Z0-9\$_]*$`)
+	ms := NewMonAliveMiddlwareServer(bot, []string{"/api/mon/"}, "../global_cfg.json")
 	var err error
 	lib.SetupTestCreateDirs()
 
@@ -63,13 +48,17 @@ func Test_JsonPPathServer(t *testing.T) {
 		}
 		lib.SetupTestMimicReq(req, "example.com")
 
+		goftlmux.ParseQueryParamsReg(rec, req, &wr.Ps) //
+
 		ms.ServeHTTP(wr, req)
 		wr.FinalFlush()
 
 		b := string(rec.Body.Bytes())
-		if b != test.expectedBody {
-			t.Errorf("Error %2d, reject error got: %s, expected %s\n", ii, b, test.expectedBody)
-		}
+		fmt.Printf("Output: %s\n", b) // { "status":"success" } -- xyzzy - parse and check status
+
+		//if b != test.expectedBody {
+		//	t.Errorf("Error %2d, reject error got: %s, expected %s\n", ii, b, test.expectedBody)
+		//}
 
 	}
 
