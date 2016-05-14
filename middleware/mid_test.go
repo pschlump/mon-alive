@@ -22,10 +22,8 @@ import (
 func Test_JsonPPathServer(t *testing.T) {
 	tests := []struct {
 		cmd            string
-		setup_cmd      string
 		url            string
-		expectedBody   string
-		expectedStatus string // xyzzy - validate status on return
+		expectedStatus string
 		key            string
 		keyExists      string
 		tf             string
@@ -157,10 +155,6 @@ func Test_JsonPPathServer(t *testing.T) {
 					}
 				}
 			}
-
-		//if b != test.expectedBody {
-		//	t.Errorf("Error %2d, reject error got: %s, expected %s\n", ii, b, test.expectedBody)
-		//}
 
 		default:
 			t.Errorf("Test %2d, Invalid test.cmd value %s\n", ii, test.cmd)
