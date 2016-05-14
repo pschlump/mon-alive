@@ -32,8 +32,9 @@ type ConfigItem struct {
 }
 
 type ConfigMonitor struct {
-	Item   map[string]ConfigItem //
-	MinTTL int                   // Defaults to 30 seconds
+	Item     map[string]ConfigItem //
+	MinTTL   int                   // Defaults to 30 seconds - shortest time that can be set in seconds
+	TrxIdTTL int                   // 0 for forever, else length in seconds for Trx:Id tracing to last on an Trx:Id
 }
 
 type MonIt struct {
@@ -416,6 +417,14 @@ func (mon *MonIt) GetConfig() (s string) {
 	}
 	return
 }
+
+/*
+TODO:
+		/api/mon/trx?state=on|off
+		trx:state (on|off)
+			Turn tracking on/off for this Trx-ID -  if via SIO - then sends message via Pub/Sub to all servers to turn this ID on.  If via /api/mon/trx then
+			if via /api/mon/trx - then sends Pub/Sub to tracer - to tell tracter to send message to pass on.
+*/
 
 const db1 = false
 const db2 = false

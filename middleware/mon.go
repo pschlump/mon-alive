@@ -117,6 +117,10 @@ func initMux(hdlr *MonAliveType) (mux *httpmux.ServeMux) {
 	mux.HandleFunc("/api/mon/i-am-alive", hdlr.closure_respIAmAlive()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-failed", hdlr.closure_respIFailed()).Method("GET", "POST")
+	/*
+	   TODO:
+	   		/api/mon/trx?state=on|off
+	*/
 
 	mux.HandleErrors(http.StatusNotFound, httpmux.HandlerFunc(errorHandlerFunc))
 	return
@@ -303,8 +307,8 @@ func (hdlr *MonAliveType) closure_respAddNewItem() func(www http.ResponseWriter,
 			}
 			ttl, err := strconv.ParseInt(sTtl, 10, 64)
 			// if err == nil || ttl < hdlr.mon.MinTTL {
-			if err == nil || ttl < 30 {
-				fmt.Fprintf(os.Stderr, "%s/api/mon/add-new-item - invalid 'ttl' paramter%s\n", MiscLib.ColorRed, MiscLib.ColorReset)
+			if err == nil && ttl < 30 {
+				fmt.Fprintf(os.Stderr, "%s/api/mon/add-new-item - invalid 'ttl' paramter >%s< - value too low%s\n", MiscLib.ColorRed, sTtl, MiscLib.ColorReset)
 				logrus.Errorf("/api/mon/add-new-item - invalid 'ttl' parameter")
 				www.WriteHeader(http.StatusBadRequest)
 				return
@@ -528,5 +532,13 @@ func (hdlr *MonAliveType) closure_respIFailed() func(www http.ResponseWriter, re
 		}
 	}
 }
+
+/*
+TODO:
+		/api/mon/trx?state=on|off
+		trx:state (on|off)
+			Turn tracking on/off for this Trx-ID -  if via SIO - then sends message via Pub/Sub to all servers to turn this ID on.  If via /api/mon/trx then
+			if via /api/mon/trx - then sends Pub/Sub to tracer - to tell tracter to send message to pass on.
+*/
 
 /* vim: set noai ts=4 sw=4: */
