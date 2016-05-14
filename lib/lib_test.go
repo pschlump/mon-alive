@@ -115,7 +115,12 @@ func Test_MonAliveLib(t *testing.T) {
 			chk:      "down",
 			tf:       "Inicates that test 12 (2 back) (SendIFailed) did not work",
 		},
-		// 15+ - last item - remove to cleanup
+		// 15
+		{
+			cmd: "GetListOfPotentialItem",
+		},
+		// func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
+		// 16+ - last item - remove to cleanup
 		{
 			cmd:      "RemoveItem",
 			itemName: `bob`,
@@ -194,6 +199,12 @@ func Test_MonAliveLib(t *testing.T) {
 			mon.SendIAmShutdown(test.itemName)
 		case "SendIFailed":
 			mon.SendIFailed(test.itemName)
+		case "GetListOfPotentialItem":
+			rv := mon.GetListOfPotentialItem()
+			if db53 {
+				fmt.Printf("GetListOfPotentialItem rv= %s\n", lib.SVarI(rv))
+			}
+			// not cerrtain how to auto-test this yet
 		default:
 			t.Errorf("Test %2d,  invalid test case, %s\n", ii, test.cmd)
 		}
@@ -203,24 +214,18 @@ func Test_MonAliveLib(t *testing.T) {
 
 /*
 
-func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]interface{}) {
+TODO:
+	func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]interface{}) {
 
-Issue:
-	func (mon *MonIt) GetNotifyItem() (rv []string) {
-
-func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
-	! TODO !
-
-Tested in other locaitons:
+Tested in other locaitons (the CLI):
 	* func (mon *MonIt) SendPeriodicIAmAlive(itemName string) {
 	* func (mon *MonIt) SetConfigFromFile(fn string) {
-
---- note ---------------------------------------------------------------------------------------------------------
 
 */
 
 const db50 = false
 const db51 = false
 const db52 = false
+const db53 = false
 
 /* vim: set noai ts=4 sw=4: */

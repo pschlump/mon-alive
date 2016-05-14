@@ -12,23 +12,15 @@ import (
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 )
 
-// done ; 0. Make this into middleware in Go-FTL
-// done ; 0. An URL that will send an "i-am-alive" to a item - based on get/post on URL		/api/mon/i-am-alive?itemName
-// done ; 0. An URL that will kill/die an "i-am-alive" to a item - based on get/post on URL -- I AM Shutting Down Now - Dead /api/mon/shutdown-now?itemName
-
 // TODO ; 1. Get list of up/down systems based on Group search -- ONLY check systesm that match the group
 // TODO ; 1. Get list groups
 
-// done ; 3. other methods for pinging like pub/sub in redis or query to database - maybee CLI for ping
 // TODO ; 4. push notification? how - to chat bot?
 // TODO ; 5. push notification? how - to log - where it can be picked up and pushed to Twillow? / to SMS? to Email?
 // TODO ; 6. create daemon - to SIO push the monitored content out
 // TODO ; 7. Periodic "get" and check operations - to poll - websites for alive - working
 // TODO ; 7. Periodic run script and get status
 // TODO ; 7. OnTime run script and get status -- check config on system -- Use SSH to connect to system and check config
-
-// Note:
-//	https://prometheus.io/ -- read consolidate logs -- notification
 
 type ConfigItem struct {
 	Name         string                 // Extended name for this item
@@ -402,8 +394,14 @@ func (mon *MonIt) SetConfigFromFile(fn string) {
 // get to set of "could-be-monitored-items"
 // URL: /api/mon/list-potential
 func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
-	// conn.Cmd("SADD", "monitor:potentialItem", itemName) // add to set of "could-be-monitored-items"
-	// xyzzy TODO:
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	it, err := conn.Cmd("SMEMBERS", "monitor:potentialItem").List()
+	if err != nil {
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s\n", err)
+		return
+	}
+	rv = it
 	return
 }
 
