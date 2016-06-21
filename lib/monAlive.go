@@ -419,12 +419,26 @@ func (mon *MonIt) GetConfig() (s string) {
 }
 
 /*
-TODO:
-		/api/mon/trx?state=on|off
-		trx:state (on|off)
-			Turn tracking on/off for this Trx-ID -  if via SIO - then sends message via Pub/Sub to all servers to turn this ID on.  If via /api/mon/trx then
-			if via /api/mon/trx - then sends Pub/Sub to tracer - to tell tracter to send message to pass on.
+	/api/mon/trx?state=on|off
+	trx:state (on|off)
+		Turn tracking on/off for this Trx-ID -  if via SIO - then sends message via Pub/Sub to all servers to turn this ID on.  If via /api/mon/trx then
+		if via /api/mon/trx - then sends Pub/Sub to tracer - to tell tracter to send message to pass on.
 */
+func (mon *MonIt) SendTrxState(state, trxId string) {
+	ss := struct {
+		TrxId string
+		State string
+	}{
+		TrxId: trxId,
+		State: state,
+	}
+	conn := mon.GetConn()
+	err := conn.Cmd("PUBLISH", "monitor:trx-state", lib.SVar(ss)).Err
+	mon.FreeConn(conn)
+	if err != nil {
+		fmt.Printf("Error: %s publishing monitor:trx-state\n", err)
+	}
+}
 
 const db1 = false
 const db2 = false

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pschlump/Go-FTL/server/cfg"
@@ -21,6 +22,7 @@ import (
 	"github.com/pschlump/mon-alive/lib"
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis"
+	"github.com/pschlump/uuid"
 )
 
 // --------------------------------------------------------------------------------------------------------------------------
@@ -86,7 +88,7 @@ func init() {
 		return rv
 	}
 
-	cfg.RegInitItem2("MonAliveMiddlware", initNext, createEmptyType, postInit, `{
+	cfg.RegInitItem2("MonAliveMiddleware", initNext, createEmptyType, postInit, `{
 		"Paths":             { "type":["string","filepath"], "isarray":true, "required":true },
 		"LoginRequired":	 { "type":["string"], "isarray":true },
 		"LineNo":            { "type":[ "int" ], "default":"1" }
@@ -117,10 +119,7 @@ func initMux(hdlr *MonAliveType) (mux *httpmux.ServeMux) {
 	mux.HandleFunc("/api/mon/i-am-alive", hdlr.closure_respIAmAlive()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
 	mux.HandleFunc("/api/mon/i-failed", hdlr.closure_respIFailed()).Method("GET", "POST")
-	/*
-	   TODO:
-	   		/api/mon/trx?state=on|off
-	*/
+	mux.HandleFunc("/api/mon/trx-state", hdlr.closure_respTrxState()).Method("GET", "POST")
 
 	mux.HandleErrors(http.StatusNotFound, httpmux.HandlerFunc(errorHandlerFunc))
 	return
@@ -534,11 +533,44 @@ func (hdlr *MonAliveType) closure_respIFailed() func(www http.ResponseWriter, re
 }
 
 /*
-TODO:
 		/api/mon/trx?state=on|off
 		trx:state (on|off)
 			Turn tracking on/off for this Trx-ID -  if via SIO - then sends message via Pub/Sub to all servers to turn this ID on.  If via /api/mon/trx then
 			if via /api/mon/trx - then sends Pub/Sub to tracer - to tell tracter to send message to pass on.
+	mux.HandleFunc("/api/mon/trx-state", hdlr.closure_respTrxState()).Method("GET", "POST")
 */
+func (hdlr *MonAliveType) closure_respTrxState() func(www http.ResponseWriter, req *http.Request) {
+	return func(www http.ResponseWriter, req *http.Request) {
+		if rw, ok := www.(*goftlmux.MidBuffer); ok {
+
+			trx := mid.GetTrx(rw)
+			trx.PathMatched(1, "MonAliveMiddleware:/api/mon/trx-state", hdlr.Paths, 0, req.URL.Path)
+
+			if !hdlr.CheckLoginRequired(www, rw, req) {
+				return
+			}
+
+			state := rw.Ps.ByNameDflt("state", "off")
+			TrxId := rw.Ps.ByNameDflt("X-Go-FTL-Trx-Id", "")
+			rw.RequestTrxId = TrxId
+
+			var trx_id_found = (TrxId != "")
+
+			if !trx_id_found { // check for a trx id - if no id then create cooke with ID
+				id0, _ := uuid.NewV4()
+				TrxId = id0.String()
+				rw.RequestTrxId = TrxId
+				expire := time.Now().AddDate(0, 0, 1)
+				cookie := http.Cookie{Name: "X-Go-FTL-Trx-Id", Value: TrxId, Path: "/", Expires: expire, RawExpires: expire.Format(time.UnixDate), MaxAge: 86400, Secure: false, HttpOnly: false}
+				http.SetCookie(www, &cookie)
+			}
+
+			hdlr.mon.SendTrxState(state, TrxId)
+			SetNoCacheHeaders(www, req)
+			fmt.Fprintf(www, "{ \"status\":\"success\" }")
+
+		}
+	}
+}
 
 /* vim: set noai ts=4 sw=4: */

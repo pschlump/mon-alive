@@ -29,6 +29,10 @@ func Test_JsonPPathServer(t *testing.T) {
 		tf             string
 	}{
 
+		// 1st Test ------------------------------------------------------------------------------------------------------------
+		// Verify that we can configure, tell I am Alive, tell I Failed and de-configure from /api/mon
+		// ---------------------------------------------------------------------------------------------------------------------
+
 		// Setup - delete monitor::fred
 		// 0
 		{
@@ -89,6 +93,19 @@ func Test_JsonPPathServer(t *testing.T) {
 			cmd: "del_key",
 			key: "monitor::fred",
 		},
+
+		/*
+			   TODO: Untested Items
+					mux.HandleFunc("/api/mon/get-notify-item", hdlr.closure_respGetNotifyItem()).Method("GET")
+					mux.HandleFunc("/api/mon/item-status", hdlr.closure_respItemStatus()).Method("GET")
+					mux.HandleFunc("/api/mon/get-all-item", hdlr.closure_respGetAllItem()).Method("GET")
+					mux.HandleFunc("/api/mon/upd-config-item", hdlr.closure_respUpdConfigItem()).Method("GET", "POST")
+					mux.HandleFunc("/api/mon/list-potential", hdlr.closure_respListPotential()).Method("GET")
+					mux.HandleFunc("/api/mon/reload-config", hdlr.closure_respReloadConfig()).Method("GET", "POST")
+					mux.HandleFunc("/api/mon/i-am-shutdown", hdlr.closure_respIAmShutdown()).Method("GET", "POST")
+					mux.HandleFunc("/api/mon/trx-state", hdlr.closure_respTrxState()).Method("GET", "POST") //  /api/mon/trx-state?state=on|off
+		*/
+
 	}
 
 	bot := mid.NewConstHandler(`{"abc":"def"}`, "Content-Type", "application/json")
