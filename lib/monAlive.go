@@ -180,7 +180,7 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
 			rv = append(rv, vv)
 		} else if item == "" {
-			fmt.Sprintf("Item: %s - not founds\n", vv)
+			fmt.Fprintf(os.Stderr, "Item: %s - not founds\n", vv)
 		} else {
 			if db3 {
 				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())

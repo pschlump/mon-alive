@@ -44,7 +44,7 @@ func init() {
 		return
 	}
 
-	postInit := func(h interface{}, callNo int) error {
+	postInit := func(h interface{}, cfgData map[string]interface{}, callNo int) error {
 
 		hh, ok := h.(*MonAliveType)
 		if !ok {
