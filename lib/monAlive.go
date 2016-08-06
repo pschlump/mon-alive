@@ -159,7 +159,7 @@ func (mon *MonIt) SendPeriodicIAmAlive(itemName string) {
 
 }
 
-// Return the set of items that is NOT running that should be running
+// GetNotifyItem returns the set of items that is NOT running that should be running
 // Eventually - check via circuit checs for items that require ping
 // URL: /api/mon/get-notify-item
 func (mon *MonIt) GetNotifyItem() (rv []string) {
@@ -180,7 +180,7 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
 			rv = append(rv, vv)
 		} else if item == "" {
-			fmt.Fprintf(os.Stderr, "Item: %s - not founds\n", vv)
+			fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
 		} else {
 			if db3 {
 				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
@@ -191,20 +191,62 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 	return
 }
 
+type ItemStatus struct {
+	Name     string
+	Status   string
+	Data     string
+	LongName string
+}
+
+// GetStatusOfItemVerbose returns the set of items that is NOT running that should be running
+// Eventually - check via circuit checs for items that require ping
+// URL: /api/mon/get-notify-item
+func (mon *MonIt) GetStatusOfItemVerbose() (rv []ItemStatus) {
+	// get all items - get notify items - do DIFF and see if not being pinged
+	// get the set of items that are being monitored -- monitor:IAmAlive
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	it, err := conn.Cmd("SMEMBERS", "monitor:IAmAlive").List()
+	if err != nil {
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s\n", err)
+		return
+	}
+	u := mon.UpdateConfig()
+	// Iterate over set and check to see what keys are missing
+	for ii, vv := range it {
+		item, err := conn.Cmd("GET", "monitor::"+vv).Str()
+		// fmt.Printf("GET monitor::%s, err=%s item=%s, %s\n", vv, err, item, godebug.LF())
+		longName := u.Item[vv].Name
+		if err != nil {
+			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
+			rv = append(rv, ItemStatus{Name: vv, Status: "down", LongName: longName})
+		} else if item == "" {
+			fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
+			rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: "", LongName: longName})
+		} else {
+			if db3 {
+				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
+			}
+			rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: item, LongName: longName})
+		}
+	}
+	return
+}
+
 func StatusOf(itemName string, allStat []ItemStatus) (rv string) {
 	for _, vv := range allStat {
 		if vv.Name == itemName {
-			return vv.Up
+			return vv.Status
 		}
 	}
 	return "up" // keep positive in uncertain times
 }
 
-type ItemStatus struct {
-	Up       string
-	Name     string
-	LongName string
-}
+//type ItemStatus struct {
+//	Up       string
+//	Name     string
+//	LongName string
+//}
 
 // GetItemStatus - up/down - all items monitored.
 // URL: /api/mon/item-status
@@ -212,9 +254,9 @@ func (mon *MonIt) GetItemStatus() (rv []ItemStatus) {
 	u := mon.UpdateConfig()
 	dn := mon.GetNotifyItem()
 	for ii, vv := range u.Item {
-		trv := ItemStatus{Up: "up", Name: ii, LongName: vv.Name}
+		trv := ItemStatus{Status: "up", Name: ii, LongName: vv.Name}
 		if lib.InArray(ii, dn) {
-			trv.Up = "down"
+			trv.Status = "down"
 		}
 		rv = append(rv, trv)
 	}
