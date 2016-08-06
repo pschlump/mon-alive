@@ -91,6 +91,7 @@ func init() {
 	cfg.RegInitItem2("MonAliveMiddleware", initNext, createEmptyType, postInit, `{
 		"Paths":             { "type":["string","filepath"], "isarray":true, "required":true },
 		"LoginRequired":	 { "type":["string"], "isarray":true },
+		"ConfigFile":	     { "type":["string"], "default":"./mon-alive.json" },
 		"LineNo":            { "type":[ "int" ], "default":"1" }
 		}`)
 }
@@ -139,6 +140,7 @@ type MonAliveType struct {
 	Next          http.Handler                //
 	Paths         []string                    // Path to respond to
 	LoginRequired []string                    //
+	ConfigFile    string                      //
 	LineNo        int                         //
 	g_cfg         *cfg.ServerGlobalConfigType //
 	mon           *MonAliveLib.MonIt          //
