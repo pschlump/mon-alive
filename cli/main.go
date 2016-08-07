@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/pschlump/MiscLib"
 	"github.com/pschlump/mon-alive/lib"
@@ -131,21 +132,12 @@ func main() {
 			mon.SendIAmAlive(fns[ii+1], myStatus)
 			ii++
 		case "status":
-			st := mon.GetStatusOfItemVerbose()
-			// fmt.Printf("%s\n", lib.SVarI(st))
 
-			// xyzzy --verbose, --periodic
+			// xyzzy --verbose
 
-			if *Periodic != "" {
-				nSec, err := strconv.ParseInt(*Periodic, 10, 64)
-				if err != nil {
-					fmt.Printf("Error: %s converting [%s] number of seconds, assuming 60\n", err, *Periodic)
-					nSec = 60
-				}
-				fmt.Printf("%T %d\n", nSec, nSec)
-				//for {
-				//}
-			} else {
+			showStatus := func() {
+				st := mon.GetStatusOfItemVerbose()
+				// fmt.Printf("%s\n", lib.SVarI(st))
 				fmt.Printf("%4s  %-20s %-5s %-30s\n", "", "Name", "Stat.", "Data")
 				fmt.Printf("%5s %-20s %-5s %-30s\n", "-----", "--------------------", "-----", "-------------------------")
 				for ii, vv := range st {
@@ -155,6 +147,22 @@ func main() {
 						fmt.Printf("%4d: %-20s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorRed, vv.Status, MiscLib.ColorReset, vv.LongName)
 					}
 				}
+			}
+
+			if *Periodic != "" {
+				nSec, err := strconv.ParseInt(*Periodic, 10, 64)
+				if err != nil {
+					fmt.Printf("Error: %s converting [%s] number of seconds, assuming 60\n", err, *Periodic)
+					nSec = 60
+				}
+				//fmt.Printf("%T %d\n", nSec, nSec)
+				for {
+					fmt.Printf("\n")
+					showStatus()
+					time.Sleep(time.Duration(1000*nSec) * time.Millisecond)
+				}
+			} else {
+				showStatus()
 			}
 
 		}
