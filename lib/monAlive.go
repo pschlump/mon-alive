@@ -3,6 +3,7 @@ package MonAliveLib
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"time"
 
@@ -15,19 +16,18 @@ import (
 // TODO ; 1. Get list of up/down systems based on Group search -- ONLY check systesm that match the group
 // TODO ; 1. Get list groups
 
-// TODO ; 4. push notification? how - to chat bot?
-// TODO ; 5. push notification? how - to log - where it can be picked up and pushed to Twillow? / to SMS? to Email?
-// TODO ; 6. create daemon - to SIO push the monitored content out
-// TODO ; 7. Periodic "get" and check operations - to poll - websites for alive - working
-// TODO ; 7. Periodic run script and get status
-// TODO ; 7. OnTime run script and get status -- check config on system -- Use SSH to connect to system and check config
+// TODO ; sort the return set of items up/down - by name
+// TODO ; Add in notification destination and action for down items
 
 type ConfigItem struct {
-	Name         string                 // Extended name for this item
-	TTL          uint64                 // How long before should have received PING on item
-	RequiresPing bool                   // To determine if it is alive requires a "ping" -- Maybe keep track of delta-t on last ping and only so often
-	PingUrl      string                 // URL to do "get" on to ping item -- /api/status for example
-	Group        []string               // Set of groups that this belongs to "host":"virtual-host", "host":"goftl-server"
+	Name         string                 `json:"Name"`         // Extended name for this item
+	TTL          uint64                 `json:"TTL"`          // How long before should have received PING on item
+	RequiresPing bool                   `json:"RequiresPing"` // To determine if it is alive requires a "ping" -- Maybe keep track of delta-t on last ping and only so often
+	PingUrl      string                 `json:"PingUrl"`      // URL to do "get" on to ping item -- http://localhost:16040/api/status for example
+	Group        []string               `json:"Group"`        // Set of groups that this belongs to "host":"virtual-host", "host":"goftl-server"
+	CdTo         string                 `json:"CdTo"`         // Direcotry to chagne to before run
+	CmdToRun     string                 `json:"CmdToRun"`     // Command to run when notification is needed.
+	seen         bool                   `json:"-"`            // marker - what has been seen, so can find not seen and report as down.
 	Extra        map[string]interface{} // Other Config Items...
 }
 
@@ -191,6 +191,41 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 	return
 }
 
+func DoGet(url string) (string, bool) {
+	client := http.Client{nil, nil, nil, 0}
+	r1, e0 := client.Get(url)
+	if e0 != nil {
+		fmt.Printf("\tError: %v, %s\n", e0, godebug.LF())
+		return "Error", false
+	}
+	rv, e1 := ioutil.ReadAll(r1.Body)
+	if e1 != nil {
+		fmt.Printf("\tError: %v, %s\n", e1, godebug.LF())
+		return "Error", false
+	}
+	r1.Body.Close()
+	if string(rv[0:6]) == ")]}',\n" {
+		rv = rv[6:]
+	}
+
+	return string(rv), true
+}
+
+//func SendIAmAlive(item string, note string) (ok bool, rv string) {
+//	client := http.Client{nil, nil, nil, 0}
+//	s := ""
+//	e := false
+//	if u, ok := GlobalCfg["I_Am_Alive_URL"]; ok {
+//		s, e = DoGet(&client, u)
+//	} else {
+//		// EmailSent-Q1
+//		s, e = DoGet(&client, GlobalCfg["monitor_url"]+"/api/ping_i_am_alive?item="+item+"&note=Ok"+note)
+//	}
+//	rv = s
+//	ok = e
+//	return
+//}
+
 type ItemStatus struct {
 	Name     string
 	Status   string
@@ -201,7 +236,7 @@ type ItemStatus struct {
 // GetStatusOfItemVerbose returns the set of items that is NOT running that should be running
 // Eventually - check via circuit checs for items that require ping
 // URL: /api/mon/get-notify-item
-func (mon *MonIt) GetStatusOfItemVerbose() (rv []ItemStatus) {
+func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus) {
 	// get all items - get notify items - do DIFF and see if not being pinged
 	// get the set of items that are being monitored -- monitor:IAmAlive
 	conn := mon.GetConn()
@@ -214,20 +249,61 @@ func (mon *MonIt) GetStatusOfItemVerbose() (rv []ItemStatus) {
 	u := mon.UpdateConfig()
 	// Iterate over set and check to see what keys are missing
 	for ii, vv := range it {
+		up := true
 		item, err := conn.Cmd("GET", "monitor::"+vv).Str()
 		// fmt.Printf("GET monitor::%s, err=%s item=%s, %s\n", vv, err, item, godebug.LF())
-		longName := u.Item[vv].Name
-		if err != nil {
-			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
-			rv = append(rv, ItemStatus{Name: vv, Status: "down", LongName: longName})
-		} else if item == "" {
-			fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
-			rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: "", LongName: longName})
-		} else {
-			if db3 {
-				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
+		Item, ok := u.Item[vv]
+		if ok {
+			Item.seen = true
+			longName := Item.Name
+			if err != nil {
+				// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
+				rv = append(rv, ItemStatus{Name: vv, Status: "down", LongName: longName})
+				up = false
+			} else if item == "" {
+				fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
+				rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: "", LongName: longName})
+			} else {
+				if db3 {
+					fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
+				}
+				rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: item, LongName: longName})
 			}
-			rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: item, LongName: longName})
+			if !up {
+				Item := u.Item[vv]
+				if Item.RequiresPing {
+					fmt.Printf("Ping required to verify it is down, %s\n", Item.PingUrl)
+				}
+			}
+			if !up {
+				if Item.RequiresPing {
+					_, ok := DoGet(Item.PingUrl)
+					if ok {
+						Item.seen = true
+						rv[len(rv)-1] = ItemStatus{Name: vv, Status: "up", Data: item, LongName: "Ping check " + Item.PingUrl + " checks ok"}
+					}
+				}
+			}
+			u.Item[vv] = Item
+		} else {
+			if extra {
+				if err != nil {
+					rv = append(rv, ItemStatus{Name: vv, Status: "down", Data: " (u) ", LongName: vv + " (( Unexpected - Not in config ))"})
+				} else {
+					rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: " (u) ", LongName: vv + " (( Unexpected - Not in config ))"})
+				}
+			}
+		}
+	}
+	for ii, vv := range u.Item {
+		if !vv.seen {
+			rv = append(rv, ItemStatus{Name: ii, Status: "down", Data: "", LongName: vv.Name + " ((Not Seen))"})
+			if vv.RequiresPing {
+				_, ok := DoGet(vv.PingUrl)
+				if ok {
+					rv[len(rv)-1] = ItemStatus{Name: ii, Status: "up", Data: "Ping:" + vv.PingUrl, LongName: "Ping check " + vv.PingUrl + " checks ok."}
+				}
+			}
 		}
 	}
 	return

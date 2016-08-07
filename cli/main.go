@@ -16,49 +16,10 @@ import (
 
 /*
 
-1. Add in "ping-to-check" and an api
-2. Add in a GET for saying i-am-alive
 3. Add in notification destination and action for down items
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-0. Dump in a formatted format - SVarI format
-
-1. A CLI that will run a command and do stuff
-
-	1. I AM Alive - send message for somebody -- Perform "GET"
-
-cli i-am-alive Name
-
-cli status
-	Name Up/Dn
-	Name Up/Dn
-	Name Up/Dn
-	Name Up/Dn
-
-cli -v status
-	Name Up/Dn LoadLevel SelfReport/PokeIt  TimeTillEvent
-
-cli -j -v status -- Saem output in JSON format
-
-
--l CfgFile		-- default to mon-alive.json
-
+Notes:
+	Dir, _ = os.Getwd()
 
 */
 
@@ -66,14 +27,14 @@ var Debug = flag.Bool("debug", false, "Debug flag")                       // 0
 var Cfg = flag.String("cfg", "../global_cfg.json", "Configuration file")  // 1
 var LoadFn = flag.String("load", "", "Configuration file to load")        // 2
 var DumpFn = flag.String("dump", "", "Dump configuration to file")        // 3
-var Verbose = flag.String("verbose", "", "verbose output")                // 4
+var Verbose = flag.Bool("verbose", false, "verbose output")               // 4
 var Periodic = flag.String("periodic", "", "loop forever showing output") // 5
 func init() {
 	flag.BoolVar(Debug, "D", false, "Debug flag")                              // 0
 	flag.StringVar(Cfg, "c", "../global_cfg.json", "Configuration file")       // 1
 	flag.StringVar(LoadFn, "l", "", "Configuration file to load")              // 2
 	flag.StringVar(DumpFn, "d", "", "Dump configuration to file to listen to") // 3
-	flag.StringVar(Verbose, "v", "", "verbose output")                         // 4
+	flag.BoolVar(Verbose, "v", false, "verbose output")                        // 4
 	flag.StringVar(Periodic, "P", "", "loop forever showing output")           // 5
 }
 
@@ -81,12 +42,6 @@ func main() {
 
 	flag.Parse()
 	fns := flag.Args()
-
-	//if *DumpFn != "" && *LoadFn != "" {
-	//	fmt.Printf("Only one of --load --dump at a time\n")
-	//	flag.Usage()
-	//	os.Exit(1)
-	//}
 
 	qdemolib.SetupRedisForTest(*Cfg)
 
@@ -133,18 +88,16 @@ func main() {
 			ii++
 		case "status":
 
-			// xyzzy --verbose
-
 			showStatus := func() {
-				st := mon.GetStatusOfItemVerbose()
+				st := mon.GetStatusOfItemVerbose(*Verbose)
 				// fmt.Printf("%s\n", lib.SVarI(st))
-				fmt.Printf("%4s  %-20s %-5s %-30s\n", "", "Name", "Stat.", "Data")
-				fmt.Printf("%5s %-20s %-5s %-30s\n", "-----", "--------------------", "-----", "-------------------------")
+				fmt.Printf("%4s  %-30s %-5s %-30s\n", "", "Name", "Stat.", "Data")
+				fmt.Printf("%5s %-30s %-5s %-30s\n", "-----", "------------------------------", "-----", "-------------------------")
 				for ii, vv := range st {
 					if vv.Status == "up" {
-						fmt.Printf("%4d: %-20s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
+						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
 					} else {
-						fmt.Printf("%4d: %-20s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorRed, vv.Status, MiscLib.ColorReset, vv.LongName)
+						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorRed, vv.Status, MiscLib.ColorReset, vv.LongName)
 					}
 				}
 			}
@@ -155,7 +108,6 @@ func main() {
 					fmt.Printf("Error: %s converting [%s] number of seconds, assuming 60\n", err, *Periodic)
 					nSec = 60
 				}
-				//fmt.Printf("%T %d\n", nSec, nSec)
 				for {
 					fmt.Printf("\n")
 					showStatus()
