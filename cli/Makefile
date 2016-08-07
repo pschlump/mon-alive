@@ -9,3 +9,6 @@ test1:
 	./cli -d tmp.out
 	diff tmp.out ./cfg0.json
 
+install:
+	cp cli ~/bin/mon-alive-cli
+

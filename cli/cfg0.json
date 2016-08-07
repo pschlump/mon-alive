@@ -1,12 +1,21 @@
 {
 	"Item":{
-		"chat-bot":{
-			"Name":"chat bot for chat demo"
-		,	"TTL": 60
-		}
-		,"go-ftl@192.168.0.157:16001":{
-			"Name":"chat bot server"
-		,	"TTL": 60
-		}
+		  "chat-bot":{
+				"Name":"chat bot for chat demo"
+			,	"TTL": 60
+			}
+		, "go-ftl@192.168.0.157:16001":{
+				"Name":"chat bot server"
+			,	"TTL": 60
+			}
+		, "bob":{
+				"Name":"bob demo"
+			,	"TTL": 60
+			}
+		, "ping-1":{
+				"Name":"ping-1 demo"
+			,	"TTL": 60
+			,	"ping_dest": "http://localhost:16040/api/status"
+			}
 	}
 }
