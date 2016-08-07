@@ -41,10 +41,10 @@ func main() {
 
 	cc := commonConfig{
 		MyStatus: make(map[string]interface{}),
-		Name:     "mon-alive", // xyzzy - Set from --name, -n option
+		Name:     "mon-alive",
 		Debug:    make(map[string]bool),
 	}
-	cc.MyStatus["cli"] = "y" // xyzzy - add in addiitonal status
+	cc.MyStatus["cli"] = "y"
 
 	app.Before = func(c *cli.Context) error {
 
@@ -54,7 +54,7 @@ func main() {
 			cc.Debug[dd] = true
 		}
 
-		// do setup - common function
+		// do setup - common function -- Need to be able to skip for i-am-alive remote!
 		cfg := c.GlobalString("cfg")
 		qdemolib.SetupRedisForTest(cfg)
 		connTmp, conFlag := qdemolib.GetRedisClient()
@@ -72,10 +72,11 @@ func main() {
 
 	create_IAmAlive := func() func(*cli.Context) error {
 		return func(ctx *cli.Context) error {
-			// xyzzy - handle remote at this spoint!
+			// xyzzy - handle remote at this spoint! -- this is doing a "get" with API Key on a remote server to signal that you are alive [ No Redis ]
+
 			cc.Name = ctx.String("name")
 
-			// xyzzy - get "status, S" at this point
+			// xyzzy - get "status, S" at this point // xyzzy - add in addiitonal status
 
 			cc.mon.SendIAmAlive(cc.Name, cc.MyStatus)
 			if cc.Debug["show-feedback"] {
@@ -153,6 +154,12 @@ func main() {
 		}
 	}
 
+	create_Trace := func() func(*cli.Context) error {
+		return func(ctx *cli.Context) error {
+			return nil
+		}
+	}
+
 	app.Commands = []cli.Command{
 		{
 			Name:   "i-am-alive",
@@ -163,7 +170,7 @@ func main() {
 					Name:  "name, n",
 					Usage: "name to report it is alive",
 				},
-				cli.StringFlag{
+				cli.StringFlag{ // xyzzy - not implemented yet
 					Name:  "remote, R",
 					Usage: "URL to use to report that you are alive - remote reporing",
 				},
@@ -191,10 +198,6 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "file, f",
-					Usage: "name of file to load",
-				},
-				cli.StringFlag{ // xyzzy - not implemented yet
-					Name:  "out, o",
 					Usage: "name of output file to print to, \"-\" is stdout.",
 				},
 			},
@@ -214,6 +217,31 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:   "trace",
+			Usage:  "Trace calls to the server",
+			Action: create_Trace(),
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "trx-id, T",
+					Usage: "Trace a specific client.",
+				},
+				cli.StringFlag{
+					Name:  "periodic, P",
+					Usage: "Set the frequency of displaying and run in a loop forever.",
+				},
+			},
+		},
+		// xyzzy - list non-users (anonomous / not logged in folks)
+		// xyzzy - list users logged in
+		// xyzzy - watch all queries
+		// xyzzy - watch all requests
+		// xyzzy - get load levels
+		// xyzzy - start new service
+		// xyzzy - stop service
+		// xyzzy - set notification destination
+		// xyzzy - set notification conditions
+		// xyzzy - set actions and conditions to take actions (start/stop microserice, servers, etc)
 	}
 
 	app.Flags = []cli.Flag{
@@ -222,10 +250,10 @@ func main() {
 			Value: "../global_cfg.json",
 			Usage: "Global Configuration File.",
 		},
-		cli.StringFlag{ // xyzzy - not implemented yet
+		cli.StringFlag{
 			Name:  "debug, D",
 			Value: "",
-			Usage: "Set debug flags.",
+			Usage: "Set debug flags [ show-feedback ]",
 		},
 	}
 

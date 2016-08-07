@@ -5,10 +5,20 @@ all:
 test: all test1
 
 test1:
-	./cli -l ./cfg0.json
-	./cli -d tmp.out
-	diff tmp.out ./cfg0.json
+	./mon-cli load --name ./cfg0.json
+	./mon-cli dump --name ,tmp.out
+	diff ,tmp.out ./cfg0.json
 
 install:
-	cp cli ~/bin/mon-alive-cli
+	cp mon-cli ~/bin
+
+linux:
+	( cd .. ; tar -cf ~/x.tar . )
+	scp ~/x.tar build_mon_cli.sh pschlump@192.168.0.182:/home/pschlump
+	ssh pschlump@192.168.0.182 chmod +x ./build_mon_cli.sh
+	ssh pschlump@192.168.0.182 ./build_mon_cli.sh
+	scp pschlump@192.168.0.182:/home/pschlump/x.tar.gz .
+	tar -xzf x.tar.gz
+	
+
 
