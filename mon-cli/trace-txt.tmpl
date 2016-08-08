@@ -1,0 +1,105 @@
+{{define "content_type"}}text/html; charset=utf-8{{end}}
+{{define "header"}}<!DOCTYPE html>
+<html lang="en">
+<body>
+	<div> header </div>
+	<ul>
+{{end}}
+{{define "body"}}
+	{{range $ii, $ee := .data}}
+		<li><a href="{{$ee.abc}}">{{$ee.abc}}</a></li>
+	{{end}}
+{{end}}
+{{define "footer"}}
+	</ul>
+	<div> footer </div>
+</body>
+</html>
+{{end}}
+{{define "render"}}
+Method: {{.Method}} {{.Uri}}
+Elapsed Time: {{.ElapsedTime}}s == {{.ElapsedTimeMs}}ms Status: {{.Status}} Bytes Sent To Client: {{.ResonseBytes}} Key: {{.Key}}
+Input Data
+--------------------------------------------------------------------------------------------------------------------------------
+	{{range $ii, $ee := .Data}}
+		{{$ee.Name}}  {{$ee.value}}
+	{{end}}
+
+Middleware Matched
+--------------------------------------------------------------------------------------------------------------------------------
+	{{range $ii, $ee := .MiddlewareStk}}
+		{{$ee.Url}} Matched {{$ee.Match}} in {{$ee.MiddlewareName}}
+	{{end}}
+
+Notes
+--------------------------------------------------------------------------------------------------------------------------------
+	{{range $ii, $ee := .Note}}
+		{{$ee.Txt}} {{$ee.File}} {{$ee.Line}} {{$ee.FuncName}} 
+	{{end}}
+
+{{end}}
+{{define "raw_data"}}
+{"Key":121153,"Data":[{"Name":"DeviceId","Value":"920437368","From":"FromCookie","ParamType":"-cookie-"},{"Name":"X-Go-FTL-Trx-Id","Value":"9bd8cdd3-8cbb-452e-4f9e-5711b29cb566","From":"FromCookie","ParamType":"-cookie-"}],"Func":null,"From":"","Qry":null,"RvBody":"{\n\t\"Method\": \"GET\",\n\t\"URL\": {\n\t\t\"Scheme\": \"\",\n\t\t\"Opaque\": \"\",\n\t\t\"User\": null,\n\t\t\"Host\": \"\",\n\t\t\"Path\": \"/api/status\",\n\t\t\"RawPath\": \"\",\n\t\t\"ForceQuery\": false,\n\t\t\"RawQuery\": \"\",\n\t\t\"Fragment\": \"\"\n\t},\n\t\"Proto\": \"HTTP/1.1\",\n\t\"ProtoMajor\": 1,\n\t\"ProtoMinor\": 1,\n\t\"Header\": {\n\t\t\"Accept\": [\n\t\t\t\"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\"\n\t\t],\n\t\t\"Accept-Encoding\": [\n\t\t\t\"gzip, deflate, sdch\"\n\t\t],\n\t\t\"Accept-Language\": [\n\t\t\t\"en-US,en;q=0.8\"\n\t\t],\n\t\t\"Cache-Control\": [\n\t\t\t\"max-age=0\"\n\t\t],\n\t\t\"Connection\": [\n\t\t\t\"keep-alive\"\n\t\t],\n\t\t\"Cookie\": [\n\t\t\t\"DeviceId=920437368; X-Go-FTL-Trx-Id=9bd8cdd3-8cbb-452e-4f9e-5711b29cb566\"\n\t\t],\n\t\t\"Upgrade-Insecure-Requests\": [\n\t\t\t\"1\"\n\t\t],\n\t\t\"User-Agent\": [\n\t\t\t\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\"\n\t\t]\n\t},\n\t\"Body\": {\n\t\t\"Closer\": {\n\t\t\t\"Reader\": null\n\t\t}\n\t},\n\t\"ContentLength\": 0,\n\t\"TransferEncoding\": null,\n\t\"Close\": false,\n\t\"Host\": \"localhost:16040\",\n\t\"Form\": null,\n\t\"PostForm\": null,\n\t\"MultipartForm\": null,\n\t\"Trailer\": null,\n\t\"RemoteAddr\": \"127.0.0.1:53449\",\n\t\"RequestURI\": \"/api/status\",\n\t\"TLS\": null,\n\t\"Cancel\": \"json: unsupported type: \u003c-chan struct {}\",\n\t\"Response\": null\n}\n","ClientIp":"127.0.0.1","RequestTime":"2016-08-07T16:17:57.10656-06:00","Method":"GET","Uri":"/api/status","Protocol":"HTTP/1.1","Status":200,"ResponseBytes":1215,"ElapsedTime":"0.004293176","ElapsedTimeMs":"4.293176","TableList":null,"Note":[{"Txt":"Start of Request, IP=127.0.0.1:53449 URI=/api/status, id=9bd8cdd3-8cbb-452e-4f9e-5711b29cb566","File":"/Users/corwin/go/src/github.com/pschlump/Go-FTL/server/mid/mid.go","Line":"89","FuncName":"github.com/pschlump/Go-FTL/server/mid.TopHandler.ServeHTTP"}],"Username":"","User_id":"","Auth_token":"","HasBeenSaved":true,"IAm":"DbTrace","MiddlewareStk":[{"AtDepth":1,"Match":"/","Url":"/api/status","MiddlewareName":"DumpResponse","ErrorReturn":""},{"AtDepth":1,"Match":"/api/status","Url":"/api/status","MiddlewareName":"DumpRequest","ErrorReturn":""}],"RequestId":"9bd8cdd3-8cbb-452e-4f9e-5711b29cb566"}
+
+{
+	"Auth_token": "",
+	"ClientIp": "127.0.0.1",
+	"Data": [
+		{
+			"From": "FromCookie",
+			"Name": "DeviceId",
+			"ParamType": "-cookie-",
+			"Value": "920437368"
+		},
+		{
+			"From": "FromCookie",
+			"Name": "X-Go-FTL-Trx-Id",
+			"ParamType": "-cookie-",
+			"Value": "9bd8cdd3-8cbb-452e-4f9e-5711b29cb566"
+		}
+	],
+	"ElapsedTime": "0.004293176",
+	"ElapsedTimeMs": "4.293176",
+	"From": "",
+	"Func": null,
+	"HasBeenSaved": true,
+	"IAm": "DbTrace",
+	"Key": 121153,
+	"Method": "GET",
+	"MiddlewareStk": [
+		{
+			"AtDepth": 1,
+			"ErrorReturn": "",
+			"Match": "/",
+			"MiddlewareName": "DumpResponse",
+			"Url": "/api/status"
+		},
+		{
+			"AtDepth": 1,
+			"ErrorReturn": "",
+			"Match": "/api/status",
+			"MiddlewareName": "DumpRequest",
+			"Url": "/api/status"
+		}
+	],
+	"Note": [
+		{
+			"File": "/Users/corwin/go/src/github.com/pschlump/Go-FTL/server/mid/mid.go",
+			"FuncName": "github.com/pschlump/Go-FTL/server/mid.TopHandler.ServeHTTP",
+			"Line": "89",
+			"Txt": "Start of Request, IP=127.0.0.1:53449 URI=/api/status, id=9bd8cdd3-8cbb-452e-4f9e-5711b29cb566"
+		}
+	],
+	"Protocol": "HTTP/1.1",
+	"Qry": null,
+	"RequestId": "9bd8cdd3-8cbb-452e-4f9e-5711b29cb566",
+	"RequestTime": "2016-08-07T16:17:57.10656-06:00",
+	"ResponseBytes": 1215,
+	"RvBody": "{\n\t\"Method\": \"GET\",\n\t\"URL\": {\n\t\t\"Scheme\": \"\",\n\t\t\"Opaque\": \"\",\n\t\t\"User\": null,\n\t\t\"Host\": \"\",\n\t\t\"Path\": \"/api/status\",\n\t\t\"RawPath\": \"\",\n\t\t\"ForceQuery\": false,\n\t\t\"RawQuery\": \"\",\n\t\t\"Fragment\": \"\"\n\t},\n\t\"Proto\": \"HTTP/1.1\",\n\t\"ProtoMajor\": 1,\n\t\"ProtoMinor\": 1,\n\t\"Header\": {\n\t\t\"Accept\": [\n\t\t\t\"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\"\n\t\t],\n\t\t\"Accept-Encoding\": [\n\t\t\t\"gzip, deflate, sdch\"\n\t\t],\n\t\t\"Accept-Language\": [\n\t\t\t\"en-US,en;q=0.8\"\n\t\t],\n\t\t\"Cache-Control\": [\n\t\t\t\"max-age=0\"\n\t\t],\n\t\t\"Connection\": [\n\t\t\t\"keep-alive\"\n\t\t],\n\t\t\"Cookie\": [\n\t\t\t\"DeviceId=920437368; X-Go-FTL-Trx-Id=9bd8cdd3-8cbb-452e-4f9e-5711b29cb566\"\n\t\t],\n\t\t\"Upgrade-Insecure-Requests\": [\n\t\t\t\"1\"\n\t\t],\n\t\t\"User-Agent\": [\n\t\t\t\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36\"\n\t\t]\n\t},\n\t\"Body\": {\n\t\t\"Closer\": {\n\t\t\t\"Reader\": null\n\t\t}\n\t},\n\t\"ContentLength\": 0,\n\t\"TransferEncoding\": null,\n\t\"Close\": false,\n\t\"Host\": \"localhost:16040\",\n\t\"Form\": null,\n\t\"PostForm\": null,\n\t\"MultipartForm\": null,\n\t\"Trailer\": null,\n\t\"RemoteAddr\": \"127.0.0.1:53449\",\n\t\"RequestURI\": \"/api/status\",\n\t\"TLS\": null,\n\t\"Cancel\": \"json: unsupported type: \u003c-chan struct {}\",\n\t\"Response\": null\n}\n",
+	"Status": 200,
+	"TableList": null,
+	"Uri": "/api/status",
+	"User_id": "",
+	"Username": ""
+}
+{{end}}
