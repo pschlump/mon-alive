@@ -5,11 +5,20 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"text/template"
 	"time"
 
+	"www.2c-why.com/h2ppp/lib/MicroServiceLib"
+
+	"github.com/pschlump/Go-FTL/server/lib"
+	"github.com/pschlump/Go-FTL/server/tr"
 	"github.com/pschlump/MiscLib"
+	"github.com/pschlump/godebug"
+	"github.com/pschlump/json"
 	"github.com/pschlump/mon-alive/lib"
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
@@ -17,6 +26,7 @@ import (
 )
 
 /*
+	"www.2c-why.com/h2ppp/lib/H2pppCommon"
 
 3. Add in notification destination and action for down items
 
@@ -32,11 +42,13 @@ func main() {
 	app.Version = "0.5.9"
 
 	type commonConfig struct {
-		MyStatus map[string]interface{} //
-		Name     string                 //
-		Debug    map[string]bool        // make this a map[string]bool set of flags that you can turn on/off
-		conn     *redis.Client          //
-		mon      *MonAliveLib.MonIt     //
+		MyStatus map[string]interface{}     //
+		Name     string                     //
+		Debug    map[string]bool            // make this a map[string]bool set of flags that you can turn on/off
+		conn     *redis.Client              //
+		mon      *MonAliveLib.MonIt         //
+		ms       *MicroServiceLib.MsCfgType //
+		// initializedTrace bool                       //
 	}
 
 	cc := commonConfig{
@@ -156,6 +168,120 @@ func main() {
 
 	create_Trace := func() func(*cli.Context) error {
 		return func(ctx *cli.Context) error {
+			TrxId := ctx.String("trx-id")
+			tfn := ctx.String("tfn")
+
+			RedisHost, RedisPort, RedisAuth := qdemolib.GetRedisConnectInfo()
+
+			ms := MicroServiceLib.NewMsCfgType("trx:listen", "")
+
+			ms.RedisConnectHost = RedisHost
+			ms.RedisConnectPort = RedisPort
+			ms.RedisConnectAuth = RedisAuth
+
+			ms.ConnectToRedis()                                     // Create the redis connection pool, alternative is ms.SetRedisPool(pool) // ms . SetRedisPool(pool *pool.Pool)
+			ms.SetRedisConnectInfo(RedisHost, RedisPort, RedisAuth) // setup the dedicated listener
+			ms.SetupListenServer()
+
+			cc.ms = ms
+
+			funcMap := template.FuncMap{
+				"json":      lib.SVarI, // Convert data to JSON format to put into JS variable
+				"sqlEncode": sqlEncode, // Encode data for use in SQL with ' converted to ''
+				"jsEsc":     jsEsc,     // Escape strings for use in JS - with ' converted to \'
+				"jsEscDbl":  jsEscDbl,  // Escape strings for use in JS - with " converted to \"
+			}
+
+			compiledTemplate, err := template.New("file-template").Funcs(funcMap).ParseFiles(tfn)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Template parse error Error: %s\n", err)
+				return err
+			}
+
+			definedTmpl := compiledTemplate.DefinedTemplates()
+
+			fx := func(dm map[string]interface{}) {
+				// fmt.Printf("fx called, data=%s\n", godebug.SVarI(dm))
+				cmd := ""
+				if cmd_x, ok := dm["cmd"]; ok {
+					if cmd_s, ok := cmd_x.(string); ok {
+						cmd = cmd_s
+					}
+				}
+				if cmd == "at-top" {
+					return
+				}
+				if cmd == "timeout-call" {
+					return
+				}
+				/*
+				   fx called, data={
+				   	"ClientTrxId": "9bd8cdd3-8cbb-452e-4f9e-5711b29cb566",
+				   	"Path": "/uri-start",
+				   	"Scheme": "rps",
+				   	"To": "rps://tracer/uri-start",
+				   	"maxKey": 121151
+				   }
+				*/
+				clientTrxId := ""
+				if ct_x, ok := dm["ClientTrxId"]; ok {
+					if ct, ok := ct_x.(string); ok {
+						clientTrxId = ct
+					}
+				}
+				if clientTrxId != "" {
+					fmt.Printf("TrxId = [%s], clientTrxId = [%s], AT: %s\n", TrxId, clientTrxId, godebug.LF())
+					if TrxId == "" || TrxId == clientTrxId {
+						fmt.Printf("AT: %s\n", godebug.LF())
+						maxKey := int64(0) // maxKey := int64(dm["maxKey"].(float64))
+						if maxKey_x, ok := dm["maxKey"]; ok {
+							if ff, ok := maxKey_x.(float64); ok {
+								maxKey = int64(ff)
+							}
+						}
+						op := "" // op := dm["Path"].(string)
+						if op_x, ok := dm["Path"]; ok {
+							if tt, ok := op_x.(string); ok {
+								op = tt
+							}
+						}
+						fmt.Printf("AT: %s\n", godebug.LF())
+						if op == "/uri-end" {
+							fmt.Printf("AT: %s\n", godebug.LF())
+							s, k, ok := GetOutput(cc.conn, maxKey)
+							fmt.Printf("s=%s k=%s, ok=%v\n", s, k, ok)
+
+							var message tr.Trx
+							err := json.Unmarshal([]byte(s), &message)
+							if err != nil {
+								fmt.Printf("%sError on redis/unmarshal - (trx:%06d)/(%s): Error:%s, %s%s\n", MiscLib.ColorRed, maxKey, s, err, godebug.LF(), MiscLib.ColorReset)
+							}
+
+							fmt.Printf("parsed message: %s\n", godebug.SVarI(message))
+
+							// ========================================================================== ==========================================================================
+							// Use template to render message to output format.
+							// ========================================================================== ==========================================================================
+							if strings.Index(definedTmpl, "render") >= 0 {
+								err = compiledTemplate.ExecuteTemplate(os.Stdout, "render", message)
+								if err != nil {
+									fmt.Fprintf(os.Stderr, "Error on rendering temlate, %s\n", err)
+								}
+							}
+
+						} else {
+							fmt.Printf("op=%v\n", op)
+						}
+					}
+				}
+			}
+
+			var wg sync.WaitGroup
+
+			ms.ListenForServer(fx, &wg)
+
+			wg.Wait() // wait forever - server runs in loop. -- On "exit" message it will
+
 			return nil
 		}
 	}
@@ -222,18 +348,20 @@ func main() {
 			Usage:  "Trace calls to the server",
 			Action: create_Trace(),
 			Flags: []cli.Flag{
-				cli.BoolFlag{
+				cli.StringFlag{
 					Name:  "trx-id, T",
-					Usage: "Trace a specific client.",
+					Usage: "Trace a specific session.",
 				},
 				cli.StringFlag{
-					Name:  "periodic, P",
-					Usage: "Set the frequency of displaying and run in a loop forever.",
+					Name:  "tfn, t",
+					Value: "./trace-txt.tmpl",
+					Usage: "Template file name.",
 				},
 			},
 		},
 		// xyzzy - list non-users (anonomous / not logged in folks)
 		// xyzzy - list users logged in
+		// xyzzy - list all trx-id's available to trace
 		// xyzzy - watch all queries
 		// xyzzy - watch all requests
 		// xyzzy - get load levels
@@ -262,4 +390,73 @@ func main() {
 		log.Fatal(err)
 	}
 
+}
+
+//------------------------------------------------------------------------------------------------
+// blog on this
+// StringSliceDesc attaches the methods of Interface to []string, sorting in increasing order.
+type StringSliceDesc []string
+
+func (p StringSliceDesc) Len() int           { return len(p) }
+func (p StringSliceDesc) Less(i, j int) bool { return p[i] > p[j] }
+func (p StringSliceDesc) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// Sort is a convenience method.
+func (p StringSliceDesc) Sort() { sort.Sort(p) }
+
+// Strings sorts a slice of strings in increasing order.
+func SortStringsDesc(a []string) { sort.Sort(StringSliceDesc(a)) }
+
+//------------------------------------------------------------------------------------------------
+func GetOutput(conn *redis.Client, theKey int64) (s, k string, ok bool) {
+	key := fmt.Sprintf(`trx:%06d`, theKey)
+	// s, err = redis.String(tr.RedisDo("GET", key))
+	s, err := conn.Cmd("GET", key).Str()
+	if err == nil {
+		rv := GetKeysTrx(conn, "trx:*")
+		k = godebug.SVar(rv)
+		if k == "" {
+			k = "[]"
+		}
+		ok = true
+		return
+	}
+	return fmt.Sprintf(`{"Error":"%s"}`, err), "[]", false
+}
+
+//------------------------------------------------------------------------------------------------
+func GetKeysTrx(conn *redis.Client, theKey string) []string {
+	// kk, err := redis.Strings(tr.RedisDo("KEYS", theKey))
+	kk, err := conn.Cmd("KEYS", theKey).List()
+	if err != nil {
+		return []string{}
+	}
+	kks := make([]string, len(kk), len(kk))
+	for i, kv := range kk {
+		x, _ := strconv.Atoi(kv[4:])
+		kks[i] = fmt.Sprintf("%d", x)
+	}
+	SortStringsDesc(kks)
+	if len(kks) > 100 {
+		return kks[0:100]
+	} else {
+		return kks
+	}
+}
+
+//------------------------------------------------------------------------------------------------
+
+func sqlEncode(s string) (rv string) {
+	rv = strings.Replace(s, "'", "''", -1)
+	return
+}
+
+func jsEsc(s string) (rv string) {
+	fmt.Printf("s=%s\n", s)
+	rv = strings.Replace(s, "'", `\'`, -1)
+	return
+}
+func jsEscDbl(s string) (rv string) {
+	rv = strings.Replace(s, `"`, `\"`, -1)
+	return
 }
