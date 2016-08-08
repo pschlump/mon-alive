@@ -1,8 +1,8 @@
-,r
+,*
 todo.1
-cli/,x
+cli/,*
 cli/cli
-lib/,x
+lib/,*
 lib/todo.1
 note.1
 
@@ -10,6 +10,11 @@ mon-cli/mon-cli
 mon-cli/mon-cli.linux
 mon-cli/plan.1
 mon-cli/x.tar.gz
+mon-cli/,*
+mon-cli/note.2
+mon-cli/note.3
+note/
+
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o

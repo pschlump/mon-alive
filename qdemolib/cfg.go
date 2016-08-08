@@ -32,6 +32,10 @@ func NewServerGlobalConfigType() *ServerGlobalConfigType {
 	}
 }
 
+func GetRedisConnectInfo() (h, p, a string) {
+	return ServerGlobal.RedisConnectHost, ServerGlobal.RedisConnectPort, ServerGlobal.RedisConnectAuth
+}
+
 func SetupRedisForTest(redis_cfg_file string) bool {
 
 	if ServerGlobal == nil {
