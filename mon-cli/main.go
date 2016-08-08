@@ -12,10 +12,9 @@ import (
 	"text/template"
 	"time"
 
-	"www.2c-why.com/h2ppp/lib/MicroServiceLib"
-
 	"github.com/pschlump/Go-FTL/server/lib"
 	"github.com/pschlump/Go-FTL/server/tr"
+	"github.com/pschlump/MicroServiceLib"
 	"github.com/pschlump/MiscLib"
 	"github.com/pschlump/godebug"
 	"github.com/pschlump/json"
