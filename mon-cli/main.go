@@ -230,9 +230,9 @@ func main() {
 					}
 				}
 				if clientTrxId != "" {
-					fmt.Printf("TrxId = [%s], clientTrxId = [%s], AT: %s\n", TrxId, clientTrxId, godebug.LF())
+					// fmt.Printf("TrxId = [%s], clientTrxId = [%s], AT: %s\n", TrxId, clientTrxId, godebug.LF())
 					if TrxId == "" || TrxId == clientTrxId {
-						fmt.Printf("AT: %s\n", godebug.LF())
+						// fmt.Printf("AT: %s\n", godebug.LF())
 						maxKey := int64(0) // maxKey := int64(dm["maxKey"].(float64))
 						if maxKey_x, ok := dm["maxKey"]; ok {
 							if ff, ok := maxKey_x.(float64); ok {
@@ -245,11 +245,13 @@ func main() {
 								op = tt
 							}
 						}
-						fmt.Printf("AT: %s\n", godebug.LF())
+						// fmt.Printf("AT: %s\n", godebug.LF())
 						if op == "/uri-end" {
-							fmt.Printf("AT: %s\n", godebug.LF())
+							// fmt.Printf("AT: %s\n", godebug.LF())
 							s, k, ok := GetOutput(cc.conn, maxKey)
-							fmt.Printf("s=%s k=%s, ok=%v\n", s, k, ok)
+							if db8 {
+								fmt.Printf("s=%s k=%s, ok=%v\n", s, k, ok)
+							}
 
 							var message tr.Trx
 							err := json.Unmarshal([]byte(s), &message)
@@ -257,11 +259,18 @@ func main() {
 								fmt.Printf("%sError on redis/unmarshal - (trx:%06d)/(%s): Error:%s, %s%s\n", MiscLib.ColorRed, maxKey, s, err, godebug.LF(), MiscLib.ColorReset)
 							}
 
-							fmt.Printf("parsed message: %s\n", godebug.SVarI(message))
+							// fmt.Printf("parsed message: %s\n", godebug.SVarI(message))
 
 							// ========================================================================== ==========================================================================
 							// Use template to render message to output format.
 							// ========================================================================== ==========================================================================
+							// xyzzy TODO: 1. Fx to clear screen at top
+							// xyzzy TODO: 2. Fx to padd left/right string to width
+							// xyzzy TODO: 3. Column headers on text tables
+							// xyzzy TODO: 4. Other data (TabServer2)
+							// xyzzy TODO: 5. Color!
+							// xyzzy TODO: 6.
+							// xyzzy TODO: 7. Returned Data to User
 							if strings.Index(definedTmpl, "render") >= 0 {
 								err = compiledTemplate.ExecuteTemplate(os.Stdout, "render", message)
 								if err != nil {
@@ -270,7 +279,9 @@ func main() {
 							}
 
 						} else {
-							fmt.Printf("op=%v\n", op)
+							if db8 {
+								fmt.Printf("op=%v\n", op)
+							}
 						}
 					}
 				}
@@ -391,6 +402,8 @@ func main() {
 	}
 
 }
+
+const db8 = false
 
 //------------------------------------------------------------------------------------------------
 // blog on this
