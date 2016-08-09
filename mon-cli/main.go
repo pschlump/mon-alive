@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"text/template"
 	"time"
+	"unsafe"
 
 	"github.com/pschlump/Go-FTL/server/lib"
 	"github.com/pschlump/Go-FTL/server/tr"
@@ -33,6 +35,45 @@ Notes:
 	Dir, _ = os.Getwd()
 
 */
+// var message tr.Trx
+// type Trx struct {
+type TrxExtended struct {
+	tr.Trx
+	ColorRed     string
+	ColorYellow  string
+	ColorGreen   string
+	ColorCyan    string
+	ColorReset   string
+	ScreenHeight int
+	ScreenWidth  int
+}
+
+type winsize struct {
+	Row    uint16
+	Col    uint16
+	Xpixel uint16
+	Ypixel uint16
+}
+
+func GetSize() (h uint, w uint) {
+	ws := &winsize{}
+	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+		uintptr(syscall.Stdin),
+		uintptr(syscall.TIOCGWINSZ),
+		uintptr(unsafe.Pointer(ws)))
+
+	if int(retCode) == -1 {
+		panic(errno)
+	}
+	w = uint(ws.Col)
+	h = uint(ws.Row)
+	return
+}
+
+//func main() {
+//	h, w := GetSize()
+//	fmt.Printf("h=%d w=%d\n", h, w)
+//}
 
 func main() {
 	app := cli.NewApp()
@@ -185,10 +226,13 @@ func main() {
 			cc.ms = ms
 
 			funcMap := template.FuncMap{
-				"json":      lib.SVarI, // Convert data to JSON format to put into JS variable
-				"sqlEncode": sqlEncode, // Encode data for use in SQL with ' converted to ''
-				"jsEsc":     jsEsc,     // Escape strings for use in JS - with ' converted to \'
-				"jsEscDbl":  jsEscDbl,  // Escape strings for use in JS - with " converted to \"
+				"json":      lib.SVarI,      // Convert data to JSON format to put into JS variable
+				"sqlEncode": sqlEncode,      // Encode data for use in SQL with ' converted to ''
+				"jsEsc":     jsEsc,          // Escape strings for use in JS - with ' converted to \'
+				"jsEscDbl":  jsEscDbl,       // Escape strings for use in JS - with " converted to \"
+				"rptStr":    strings.Repeat, //
+				"padLeft":   padLeft,        //
+				"padRight":  padRight,       //
 			}
 
 			compiledTemplate, err := template.New("file-template").Funcs(funcMap).ParseFiles(tfn)
@@ -252,24 +296,32 @@ func main() {
 								fmt.Printf("s=%s k=%s, ok=%v\n", s, k, ok)
 							}
 
-							var message tr.Trx
+							// var message tr.Trx
+							// type Trx struct {
+							var message TrxExtended
+							message.ColorRed = MiscLib.ColorRed
+							message.ColorYellow = MiscLib.ColorYellow
+							message.ColorGreen = MiscLib.ColorGreen
+							message.ColorCyan = MiscLib.ColorCyan
+							message.ColorReset = MiscLib.ColorReset
+							h, w := GetSize()
+							message.ScreenHeight = int(h)
+							message.ScreenWidth = int(w)
+
 							err := json.Unmarshal([]byte(s), &message)
 							if err != nil {
 								fmt.Printf("%sError on redis/unmarshal - (trx:%06d)/(%s): Error:%s, %s%s\n", MiscLib.ColorRed, maxKey, s, err, godebug.LF(), MiscLib.ColorReset)
 							}
 
-							// fmt.Printf("parsed message: %s\n", godebug.SVarI(message))
+							if db7 {
+								fmt.Printf("parsed message: %s\n", godebug.SVarI(message))
+							}
 
 							// ========================================================================== ==========================================================================
 							// Use template to render message to output format.
 							// ========================================================================== ==========================================================================
-							// xyzzy TODO: 1. Fx to clear screen at top
-							// xyzzy TODO: 2. Fx to padd left/right string to width
-							// xyzzy TODO: 3. Column headers on text tables
 							// xyzzy TODO: 4. Other data (TabServer2)
-							// xyzzy TODO: 5. Color!
-							// xyzzy TODO: 6.
-							// xyzzy TODO: 7. Returned Data to User
+							// xyzzy TODO: 7. Returned Data to User - Response Body shown
 							if strings.Index(definedTmpl, "render") >= 0 {
 								err = compiledTemplate.ExecuteTemplate(os.Stdout, "render", message)
 								if err != nil {
@@ -369,17 +421,18 @@ func main() {
 				},
 			},
 		},
-		// xyzzy - list non-users (anonomous / not logged in folks)
-		// xyzzy - list users logged in
-		// xyzzy - list all trx-id's available to trace
-		// xyzzy - watch all queries
-		// xyzzy - watch all requests
-		// xyzzy - get load levels
-		// xyzzy - start new service
-		// xyzzy - stop service
-		// xyzzy - set notification destination
-		// xyzzy - set notification conditions
-		// xyzzy - set actions and conditions to take actions (start/stop microserice, servers, etc)
+		// xyzzy - list all trx-id's available to trace ( and user / login status ) - in the last 1/2 hr		T
+		// xyzzy - walk backward on a trx-id, given list backward - forward, current							b, f, c
+		// xyzzy - list non-users (anonomous / not logged in folks)												a
+		// xyzzy - list users logged in																			u
+		// xyzzy - watch all queries																			*
+		// xyzzy - watch all requests																			+
+		// xyzzy - get load levels																				?
+		// xyzzy - start new service																			^	Ms
+		// xyzzy - stop service																					!	Md
+		// xyzzy - set notification destination																	M	Mn
+		// xyzzy - set notification conditions																	M	Mc
+		// xyzzy - set actions and conditions to take actions (start/stop microserice, servers, etc)			M	Ma
 	}
 
 	app.Flags = []cli.Flag{
@@ -401,8 +454,6 @@ func main() {
 	}
 
 }
-
-const db8 = false
 
 //------------------------------------------------------------------------------------------------
 // blog on this
@@ -472,3 +523,16 @@ func jsEscDbl(s string) (rv string) {
 	rv = strings.Replace(s, `"`, `\"`, -1)
 	return
 }
+
+func padLeft(width int, s string) string {
+	format := fmt.Sprintf("%%%ds", width)
+	return fmt.Sprintf(format, s)
+}
+
+func padRight(width int, s string) string {
+	format := fmt.Sprintf("%%-%ds", width)
+	return fmt.Sprintf(format, s)
+}
+
+const db7 = false
+const db8 = false

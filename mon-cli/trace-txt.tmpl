@@ -16,15 +16,16 @@
 </body>
 </html>
 {{end}}
-{{define "render"}}
-
-Method: {{.Method}} {{.Uri}}
+{{define "render"}}{{rptStr "\n" .ScreenHeight}}
+Method: {{.ColorCyan}} {{.Method}} {{.Uri}} {{.ColorReset}}
 ================================================================================================================================
     Elapsed Time: {{.ElapsedTime}}s == {{.ElapsedTimeMs}}ms Status: {{.Status}} Bytes Sent To Client: {{.ResponseBytes}} Key: {{.Key}}
     Input Data
     --------------------------------------------------------------------------------------------------------------------------------
-    {{range $ii, $ee := .Data}}
-        {{$ee.Name}}  {{$ee.Value}}{{end}}
+        {{padLeft 30 "Name" }} | Value
+        {{padLeft 30 "-------------------------" }} | --------------------------------------------------------
+{{range $ii, $ee := .Data}}        {{$ee.Name | padLeft 30}} | {{$ee.Value}}
+{{end}}
     
     Middleware Matched
     --------------------------------------------------------------------------------------------------------------------------------
