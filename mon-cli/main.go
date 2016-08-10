@@ -170,14 +170,16 @@ func main() {
 	}
 
 	create_Status := func() func(*cli.Context) error {
+		nth := 0
 		return func(ctx *cli.Context) error {
 			Verbose := ctx.Bool("verbose")
 			Periodic := ctx.String("periodic")
 
 			showStatus := func() {
+				nth++
 				st := cc.mon.GetStatusOfItemVerbose(Verbose)
 				// fmt.Printf("%s\n", lib.SVarI(st))
-				fmt.Printf("%4s  %-30s %-5s %-30s\n", "", "Name", "Stat.", "Data")
+				fmt.Printf("%4d  %-30s %-5s %-30s\n", nth%1000, "Name", "Stat.", "Data")
 				fmt.Printf("%5s %-30s %-5s %-30s\n", "-----", "------------------------------", "-----", "-------------------------")
 				for ii, vv := range st {
 					if vv.Status == "up" {

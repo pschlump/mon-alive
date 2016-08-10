@@ -10,5 +10,9 @@
 				"Name":"Micro Service - Get-Bot"
 			,	"TTL": 120
 			}
+		, "ms:qr-img-decode": {
+				"Name":"Micro Service - Get-Bot"
+			,	"TTL": 120
+			}
 	}
 }
