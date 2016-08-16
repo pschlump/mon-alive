@@ -178,12 +178,15 @@ func main() {
 		return func(ctx *cli.Context) error {
 			Verbose := ctx.Bool("verbose")
 			Periodic := ctx.String("periodic")
+			h, _ := GetSize()
 
 			showStatus := func() {
 				nth++
 				st := cc.mon.GetStatusOfItemVerbose(Verbose)
-				// fmt.Printf("%s\n", lib.SVarI(st))
-				fmt.Printf("%4d  %-30s %-5s %-30s\n", nth%1000, "Name", "Stat.", "Data")
+				cc.mon.SortByNameStatus(st)
+				// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
+				fmt.Printf("%s", strings.Repeat("\n", int(h)))
+				fmt.Printf("%4d %-30s %-5s %-30s\n", nth%10000, "Name", "Stat.", "Data")
 				fmt.Printf("%5s %-30s %-5s %-30s\n", "-----", "------------------------------", "-----", "-------------------------")
 				for ii, vv := range st {
 					if vv.Status == "up" {

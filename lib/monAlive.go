@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/pschlump/Go-FTL/server/lib"
@@ -243,6 +244,27 @@ func DoGet(url string) (string, bool) {
 //	ok = e
 //	return
 //}
+
+type Countries []ItemStatus
+
+func (slice Countries) Len() int {
+	return len(slice)
+}
+
+func (slice Countries) Less(i, j int) bool {
+	return slice[i].Name < slice[j].Name
+}
+
+func (slice Countries) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
+// cc.mon.SortByNameStatus(&st)
+func (mon *MonIt) SortByNameStatus(st Countries) {
+	// fmt.Printf("Before Sort: %s\n", godebug.SVarI(st))
+	sort.Sort(st)
+	// fmt.Printf("After 1 Sort: %s\n", godebug.SVarI(st))
+}
 
 type ItemStatus struct {
 	Name     string
