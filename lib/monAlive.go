@@ -140,29 +140,37 @@ func (mon *MonIt) SendPeriodicIAmAlive(itemName string) {
 	cfgForItem, ok := u.Item[itemName]
 	if !ok {
 		conn.Cmd("SADD", "monitor:potentialItem", itemName) // add to set of "could-be-monitored-items"
-		return                                              // not a monitored item at this time - just return
+		cfgForItem = ConfigItem{
+			TTL:  120,
+			Name: itemName,
+		}
+		fmt.Printf("Using Default Config, for %s\n", itemName)
 	}
 	ttl := cfgForItem.TTL
 
 	// timer with period 3/4 TTL - and send ping to moitor it -- create a go-routine with TTL and in a loop on channel
 	calcTtl := int(float32(ttl) * 3 / 4)
 	if calcTtl < minTtl {
-		fmt.Printf("Error: calculated TTL is too short -must- be %d or larger in seconds\n", minTtl)
-		return
+		fmt.Printf("Error: calculated TTL is too short -must- be %d or larger in seconds, setting to %d\n", minTtl, minTtl)
+		calcTtl = minTtl
 	}
 
 	myStatus := make(map[string]interface{})
 
 	go func() {
 		// fmt.Printf("AT: %s\n", godebug.LF())
+		itemNameCpy := itemName
 		ticker := time.NewTicker(time.Duration(calcTtl) * time.Second)
 		for {
+			if db4 {
+				fmt.Printf("Duration for Ticker %d, AT: %s\n", calcTtl, godebug.LF())
+			}
 			select {
 			case <-ticker.C:
 				if db1 {
-					fmt.Printf("periodic IAmAlive(%s) ticker...\n", itemName)
+					fmt.Printf("periodic IAmAlive(%s) ticker...\n", itemNameCpy)
 				}
-				mon.SendIAmAlive(itemName, myStatus)
+				mon.SendIAmAlive(itemNameCpy, myStatus)
 			}
 		}
 	}()
@@ -568,6 +576,7 @@ func (mon *MonIt) SendTrxState(state, trxId string) {
 	}
 }
 
-const db1 = false
+const db1 = true
 const db2 = false
 const db3 = false
+const db4 = true
