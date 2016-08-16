@@ -8,15 +8,15 @@
 			}
 		, "ms:get-bot":{
 				"Name":"Micro Service - Get-Bot"
-			,	"TTL": 120
+			,	"TTL": 60
 			}
 		, "ms:qr-img-decode": {
-				"Name":"Micro Service - Get-Bot"
-			,	"TTL": 120
+				"Name":"Micro Service - QR-Image Decode"
+			,	"TTL": 60
 			}
 		, "ms:chat-bot":{
-				"Name":"Micro Service - Get-Bot"
-			,	"TTL": 120
+				"Name":"Micro Service - Chat-Bot"
+			,	"TTL": 60
 			}
 	}
 }

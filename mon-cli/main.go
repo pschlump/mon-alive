@@ -27,6 +27,10 @@ import (
 )
 
 /*
+TODO:
+	1. If "name" is not unique then error! - non-unique names result in "down" state.
+
+
 	"www.2c-why.com/h2ppp/lib/H2pppCommon"
 
 3. Add in notification destination and action for down items

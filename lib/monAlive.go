@@ -69,6 +69,16 @@ func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
 		return
 	}
+
+	nh := make(map[string]bool)
+	for ii, vv := range rv.Item {
+		if _, ok := nh[vv.Name]; ok {
+			fmt.Printf("At %s in condfig data, duplicate name will result in 'down' state even when item is running (%s)", ii, vv.Name)
+		} else {
+			nh[vv.Name] = true
+		}
+	}
+
 	return
 }
 
