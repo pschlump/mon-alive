@@ -14,5 +14,9 @@
 				"Name":"Micro Service - Get-Bot"
 			,	"TTL": 120
 			}
+		, "ms:chat-bot":{
+				"Name":"Micro Service - Get-Bot"
+			,	"TTL": 120
+			}
 	}
 }

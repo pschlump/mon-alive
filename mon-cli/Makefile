@@ -5,8 +5,8 @@ all:
 test: all test1
 
 test1:
-	./mon-cli load --name ./cfg0.json
-	./mon-cli dump --name ,tmp.out
+	./mon-cli load --file ./cfg0.json
+	./mon-cli dump --file ,tmp.out
 	diff ,tmp.out ./cfg0.json
 
 install:
@@ -20,5 +20,9 @@ linux:
 	scp pschlump@192.168.0.182:/home/pschlump/x.tar.gz .
 	tar -xzf x.tar.gz
 	
-
+load_config:
+	./mon-cli load --file ./cfg0.json
+	
+dump_config:
+	./mon-cli dump --file -
 
