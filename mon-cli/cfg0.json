@@ -6,6 +6,12 @@
 			,	"RequiresPing": true
 			,	"PingUrl": "http://localhost:16040/api/status"
 			}
+		, "local:192.168.0.182":{
+				"Name":"http://192.168.0.182:80/"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			,	"PingUrl": "http://192.168.0.182:80/whatever"
+			}
 		, "ms:get-bot":{
 				"Name":"Micro Service - Get-Bot"
 			,	"TTL": 120
@@ -16,6 +22,10 @@
 			}
 		, "ms:chat-bot":{
 				"Name":"Micro Service - Chat-Bot"
+			,	"TTL": 120
+			}
+		, "ms:tracer2-bot":{
+				"Name":"Micro Service - Tracer2-Bot"
 			,	"TTL": 120
 			}
 	 	, "ping:alive":{

@@ -29,16 +29,14 @@ import (
 /*
 TODO:
 	1. If "name" is not unique then error! - non-unique names result in "down" state.
+	2. See live-ping README.md for other ideas - and additions to this.
+	3. Add in notification destination and action for down items
 
-
-	"www.2c-why.com/h2ppp/lib/H2pppCommon"
-
-3. Add in notification destination and action for down items
-
-Notes:
+Misc Notes:
 	Dir, _ = os.Getwd()
 
 */
+
 // var message tr.Trx
 // type Trx struct {
 type TrxExtended struct {
@@ -73,11 +71,6 @@ func GetSize() (h uint, w uint) {
 	h = uint(ws.Row)
 	return
 }
-
-//func main() {
-//	h, w := GetSize()
-//	fmt.Printf("h=%d w=%d\n", h, w)
-//}
 
 func main() {
 	app := cli.NewApp()
@@ -235,13 +228,15 @@ func main() {
 			cc.ms = ms
 
 			funcMap := template.FuncMap{
-				"json":      lib.SVarI,      // Convert data to JSON format to put into JS variable
-				"sqlEncode": sqlEncode,      // Encode data for use in SQL with ' converted to ''
-				"jsEsc":     jsEsc,          // Escape strings for use in JS - with ' converted to \'
-				"jsEscDbl":  jsEscDbl,       // Escape strings for use in JS - with " converted to \"
-				"rptStr":    strings.Repeat, //
-				"padLeft":   padLeft,        //
-				"padRight":  padRight,       //
+				"json":       lib.SVarI,      // Convert data to JSON format to put into JS variable
+				"sqlEncode":  sqlEncode,      // Encode data for use in SQL with ' converted to ''
+				"jsEsc":      jsEsc,          // Escape strings for use in JS - with ' converted to \'
+				"jsEscDbl":   jsEscDbl,       // Escape strings for use in JS - with " converted to \"
+				"rptStr":     strings.Repeat, //
+				"padLeft":    padLeft,        //
+				"padRight":   padRight,       //
+				"toFile":     toFile,         // Print current pipe to file, return ""
+				"teeTooFile": teeToFile,      // Print current pipe to file, pass along string
 			}
 
 			compiledTemplate, err := template.New("file-template").Funcs(funcMap).ParseFiles(tfn)
@@ -541,6 +536,16 @@ func padLeft(width int, s string) string {
 func padRight(width int, s string) string {
 	format := fmt.Sprintf("%%-%ds", width)
 	return fmt.Sprintf(format, s)
+}
+
+func toFile(fn string, s string) string {
+	ioutil.WriteFile(fn, []byte(s)+"\n", 0600)
+	return ""
+}
+
+func teeToFile(fn string, s string) string {
+	ioutil.WriteFile(fn, []byte(s), 0600)
+	return s
 }
 
 const db7 = false
