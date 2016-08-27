@@ -9,7 +9,7 @@
 		, "local:192.168.0.182":{
 				"Name":"http://192.168.0.182:80/"
 			,	"TTL": 120
-			,	"RequiresPing": false
+			,	"RequiresPing": true
 			,	"PingUrl": "http://192.168.0.182:80/whatever"
 			}
 		, "ms:get-bot":{

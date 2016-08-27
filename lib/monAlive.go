@@ -59,12 +59,13 @@ func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Cli
 func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	rv.MinTTL = 30
 	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		os.Exit(1)
 		return
 	}
-	mon.FreeConn(conn)
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
@@ -567,8 +568,8 @@ func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 func (mon *MonIt) GetConfig() (s string) {
 	var err error
 	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
 	s, err = conn.Cmd("GET", "monitor:config").Str()
-	mon.FreeConn(conn)
 	if err != nil {
 		fmt.Printf("Error: %s getting configuration - may be empty/not-set\n", err)
 		return
@@ -591,14 +592,14 @@ func (mon *MonIt) SendTrxState(state, trxId string) {
 		State: state,
 	}
 	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
 	err := conn.Cmd("PUBLISH", "monitor:trx-state", lib.SVar(ss)).Err
-	mon.FreeConn(conn)
 	if err != nil {
 		fmt.Printf("Error: %s publishing monitor:trx-state\n", err)
 	}
 }
 
-const db1 = true
+const db1 = false
 const db2 = false
 const db3 = false
-const db4 = true
+const db4 = false
