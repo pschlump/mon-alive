@@ -35,6 +35,9 @@ TODO:
 Misc Notes:
 	Dir, _ = os.Getwd()
 
+https://github.com/yaronsumel/grapes -- Remote execution of commands via SSH on sets of computers.
+	-- this would be perfect for "ping" level 1 - to systems in live monitor
+	-- also colud do stuff like "ps" and grep for running process
 */
 
 // var message tr.Trx
@@ -539,7 +542,7 @@ func padRight(width int, s string) string {
 }
 
 func toFile(fn string, s string) string {
-	ioutil.WriteFile(fn, []byte(s)+"\n", 0600)
+	ioutil.WriteFile(fn, []byte(s+"\n"), 0600)
 	return ""
 }
 
