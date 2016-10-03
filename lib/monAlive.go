@@ -3,6 +3,7 @@ package MonAliveLib
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -101,6 +102,49 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	conn.Cmd("SET", "monitor::"+itemName, ms)
 	conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
 }
+
+func (mon *MonIt) SetupStatus(listenAt string, fxStatus func() string, fxTest func() bool) {
+
+	status := func(res http.ResponseWriter, req *http.Request) {
+		s := fxStatus()
+		res.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(res, s)
+	}
+
+	test := func(res http.ResponseWriter, req *http.Request) {
+		ok := fxTest()
+		res.Header().Set("Content-Type", "application/json")
+		if ok {
+			fmt.Fprintf(res, `{"status":"succcess"}`)
+		} else {
+			fmt.Fprintf(res, `{"status":"failed"}`)
+		}
+	}
+
+	go func() {
+		http.HandleFunc("/api/status", status)
+		http.HandleFunc("/api/test", test)
+		log.Fatal(http.ListenAndServe(listenAt, nil))
+	}()
+
+}
+
+/*
+
+
+// -------------------------------------------------------------------------------------------------
+func respHandlerStatus(res http.ResponseWriter, req *http.Request) {
+	q := req.RequestURI
+
+	var rv string
+	res.Header().Set("Content-Type", "application/json")
+	rv = fmt.Sprintf(`{"status":"success","name":"go-server version 1.0.0","URI":%q,"req":%s, "response_header":%s}`, q, SVarI(req), SVarI(res.Header()))
+
+	io.WriteString(res, rv)
+}
+
+// -------------------------------------------------------------------------------------------------
+*/
 
 // shutdown op -- intentionally shutdown - means no notificaiton
 func (mon *MonIt) SendIAmShutdown(itemName string) {
@@ -603,3 +647,5 @@ const db1 = false
 const db2 = false
 const db3 = false
 const db4 = false
+
+/* vim: set noai ts=4 sw=4: */
