@@ -7,7 +7,7 @@ test: all test1
 test1:
 	./mon-cli load --file ./cfg0.json
 	./mon-cli dump --file ,tmp.out
-	diff ,tmp.out ./cfg0.json
+	diff -w ,tmp.out ./cfg0.json
 
 install:
 	cp mon-cli ~/bin

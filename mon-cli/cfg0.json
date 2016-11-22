@@ -36,5 +36,12 @@
 				"Name":"www.2c-why.com, etc..."
 			,	"TTL": 120
 			}
+		, "Go-FTL:www.go-class.com":{
+				"Name":"www.go-class.com http://localhost:17040/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://localhost:17040/api/status"
+			}
 	}
 }
+
