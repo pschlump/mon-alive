@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"www.2c-why.com/JsonX"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/pschlump/Go-FTL/server/cfg"
 	"github.com/pschlump/Go-FTL/server/goftlmux"
@@ -27,52 +29,83 @@ import (
 
 // --------------------------------------------------------------------------------------------------------------------------
 
+//func init() {
+//
+//	// normally identical - but not this time.
+//	initNext := func(next http.Handler, g_cfg *cfg.ServerGlobalConfigType, pp_cfg interface{}, serverName string, pNo int) (rv http.Handler, err error) {
+//		p_cfg, ok := pp_cfg.(*MonAliveType)
+//		if ok {
+//			p_cfg.SetNext(next)
+//			rv = p_cfg
+//		} else {
+//			err = mid.FtlConfigError
+//			logrus.Errorf("Invalid type passed at: %s", godebug.LF())
+//		}
+//		g_cfg.ConnectToRedis()
+//		p_cfg.g_cfg = g_cfg
+//		return
+//	}
+//
+//	postInit := func(h interface{}, cfgData map[string]interface{}, callNo int) error {
+//
+//		hh, ok := h.(*MonAliveType)
+//		if !ok {
+//			// rw.Log.Warn(fmt.Sprintf("Error: Wrong data type passed, Line No:%d\n", hh.LineNo))
+//			fmt.Printf("Error: Wrong data type passed, Line No:%d\n", hh.LineNo)
+//			return mid.ErrInternalError
+//		} else {
+//			hh.mon = MonAliveLib.NewMonIt(func() (conn *redis.Client) {
+//				var err error
+//				conn, err = hh.g_cfg.RedisPool.Get()
+//				if err != nil {
+//					logrus.Infof(`{"msg":"Error %s Unable to get redis pooled connection.","LineFile":%q}`+"\n", err, godebug.LF())
+//					return
+//				}
+//				return
+//			}, func(conn *redis.Client) {
+//				hh.g_cfg.RedisPool.Put(conn)
+//			})
+//		}
+//
+//		return nil
+//	}
+//
+//	// normally identical - not this time
+//	createEmptyType := func() interface{} {
+//		rv := &MonAliveType{}
+//		rv.mux = initMux(rv)
+//		rv.LoginRequired = []string{
+//			"/api/mon/get-notify-item",
+//			"/api/mon/item-status",
+//			"/api/mon/get-all-item",
+//			"/api/mon/add-new-item",
+//			"/api/mon/rem-item",
+//			"/api/mon/upd-config-item",
+//			"/api/mon/list-potential",
+//			"/api/mon/reload-config",
+//			//	"/api/mon/i-am-alive",
+//			// 	"/api/mon/i-am-shutdown",
+//			//	"/api/mon/i-failed",
+//		}
+//		return rv
+//	}
+//
+//	cfg.RegInitItem2("MonAliveMiddleware", initNext, createEmptyType, postInit, `{
+//		}`)
+//}
+//
+//// normally identical
+//func (hdlr *MonAliveType) SetNext(next http.Handler) {
+//	hdlr.Next = next
+//}
+
 func init() {
-
-	// normally identical - but not this time.
-	initNext := func(next http.Handler, g_cfg *cfg.ServerGlobalConfigType, pp_cfg interface{}, serverName string, pNo int) (rv http.Handler, err error) {
-		p_cfg, ok := pp_cfg.(*MonAliveType)
-		if ok {
-			p_cfg.SetNext(next)
-			rv = p_cfg
-		} else {
-			err = mid.FtlConfigError
-			logrus.Errorf("Invalid type passed at: %s", godebug.LF())
-		}
-		g_cfg.ConnectToRedis()
-		p_cfg.g_cfg = g_cfg
-		return
-	}
-
-	postInit := func(h interface{}, cfgData map[string]interface{}, callNo int) error {
-
-		hh, ok := h.(*MonAliveType)
-		if !ok {
-			// rw.Log.Warn(fmt.Sprintf("Error: Wrong data type passed, Line No:%d\n", hh.LineNo))
-			fmt.Printf("Error: Wrong data type passed, Line No:%d\n", hh.LineNo)
-			return mid.ErrInternalError
-		} else {
-			hh.mon = MonAliveLib.NewMonIt(func() (conn *redis.Client) {
-				var err error
-				conn, err = hh.g_cfg.RedisPool.Get()
-				if err != nil {
-					logrus.Infof(`{"msg":"Error %s Unable to get redis pooled connection.","LineFile":%q}`+"\n", err, godebug.LF())
-					return
-				}
-				return
-			}, func(conn *redis.Client) {
-				hh.g_cfg.RedisPool.Put(conn)
-			})
-		}
-
-		return nil
-	}
-
-	// normally identical - not this time
-	createEmptyType := func() interface{} {
-		rv := &MonAliveType{}
-		rv.mux = initMux(rv)
-		rv.LoginRequired = []string{
+	CreateEmpty := func(name string) mid.GoFTLMiddleWare {
+		x := &MonAliveType{}
+		meta := make(map[string]JsonX.MetaInfo)
+		JsonX.SetDefaults(&x, meta, "", "", "") // xyzzy - report errors in 'meta'
+		x.mux = initMux(x)
+		x.LoginRequired = []string{
 			"/api/mon/get-notify-item",
 			"/api/mon/item-status",
 			"/api/mon/get-all-item",
@@ -85,10 +118,9 @@ func init() {
 			// 	"/api/mon/i-am-shutdown",
 			//	"/api/mon/i-failed",
 		}
-		return rv
+		return x
 	}
-
-	cfg.RegInitItem2("MonAliveMiddleware", initNext, createEmptyType, postInit, `{
+	mid.RegInitItem3("MonAliveMiddleware", CreateEmpty, `{
 		"Paths":             { "type":["string","filepath"], "isarray":true, "required":true },
 		"LoginRequired":	 { "type":["string"], "isarray":true },
 		"ConfigFile":	     { "type":["string"], "default":"./mon-alive.json" },
@@ -96,9 +128,27 @@ func init() {
 		}`)
 }
 
-// normally identical
-func (hdlr *MonAliveType) SetNext(next http.Handler) {
+func (hdlr *MonAliveType) InitializeWithConfigData(next http.Handler, gCfg *cfg.ServerGlobalConfigType, serverName string, pNo, callNo int) (err error) {
 	hdlr.Next = next
+	//hdlr.CallNo = callNo // 0 if 1st init
+	gCfg.ConnectToRedis()
+	hdlr.g_cfg = gCfg
+	return
+}
+
+func (hdlr *MonAliveType) PreValidate(gCfg *cfg.ServerGlobalConfigType, cfgData map[string]interface{}, serverName string, pNo, callNo int) (err error) {
+	hdlr.mon = MonAliveLib.NewMonIt(func() (conn *redis.Client) {
+		var err error
+		conn, err = hdlr.g_cfg.RedisPool.Get()
+		if err != nil {
+			logrus.Infof(`{"msg":"Error %s Unable to get redis pooled connection.","LineFile":%q}`+"\n", err, godebug.LF())
+			return
+		}
+		return
+	}, func(conn *redis.Client) {
+		hdlr.g_cfg.RedisPool.Put(conn)
+	})
+	return
 }
 
 var _ mid.GoFTLMiddleWare = (*MonAliveType)(nil)
