@@ -28,6 +28,9 @@ OK
 192.168.0.139:6379> psubscribe '__key*__:expire*'
 -- Just pick up exipre
 192.168.0.139:6379> psubscribe '__key*__:monitor:* expire'			-- ?? just monitor expires(?)
+
+SEE: https://redis.io/topics/notifications
+
 */
 
 type ConfigItem struct {

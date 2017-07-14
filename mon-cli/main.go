@@ -24,6 +24,8 @@ import (
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 	"github.com/urfave/cli"
+
+	"github.com/pschlump/mon-alive/ListenLib"
 )
 
 /*
@@ -79,7 +81,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "mon-cli"
 	app.Usage = "Tracer/Live monitor - CLI version"
-	app.Version = "0.5.9"
+	app.Version = "0.6.0"
 
 	type commonConfig struct {
 		MyStatus map[string]interface{}     //
@@ -98,7 +100,11 @@ func main() {
 	}
 	cc.MyStatus["cli"] = "y"
 
+	fmt.Fprintf(os.Stderr, "%s Before app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
+
 	app.Before = func(c *cli.Context) error {
+
+		fmt.Fprintf(os.Stderr, "%s In app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
 
 		DebugFlags := c.GlobalString("debug")
 		ds := strings.Split(DebugFlags, ",")
@@ -109,6 +115,7 @@ func main() {
 		// do setup - common function -- Need to be able to skip for i-am-alive remote!
 		cfg := c.GlobalString("cfg")
 		qdemolib.SetupRedisForTest(cfg)
+		fmt.Fprintf(os.Stderr, "%s should have global setup, %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
 		connTmp, conFlag := qdemolib.GetRedisClient()
 		if !conFlag {
 			fmt.Printf("Did not connect to redis\n")
@@ -207,6 +214,58 @@ func main() {
 			} else {
 				showStatus()
 			}
+			return nil
+		}
+	}
+
+	// xyzzy - live monitor version of this - listen for messages
+	create_LiveMonitor := func() func(*cli.Context) error {
+		nth := 0
+
+		return func(ctx *cli.Context) error {
+			Verbose := ctx.Bool("verbose")
+			h, _ := GetSize()
+
+			ms := ListenLib.NewMsCfgType("trx:listen", "")
+
+			ms.RedisConnectHost = qdemolib.ServerGlobal.RedisConnectHost
+			ms.RedisConnectPort = qdemolib.ServerGlobal.RedisConnectPort
+			ms.RedisConnectAuth = qdemolib.ServerGlobal.RedisConnectAuth
+
+			// SEE: https://redis.io/topics/notifications
+
+			ms.SetEventPattern("__keyspace@0__:expire monitor:*")
+
+			ms.ConnectToRedis() // Create the redis connection pool, alternative is ms.SetRedisPool(pool) // ms . SetRedisPool(pool *pool.Pool)
+			ms.SetRedisConnectInfo(qdemolib.ServerGlobal.RedisConnectHost, qdemolib.ServerGlobal.RedisConnectPort, qdemolib.ServerGlobal.RedisConnectAuth)
+			ms.SetupListen()
+
+			showStatus := func(dm map[string]interface{}) {
+				nth++
+				st := cc.mon.GetStatusOfItemVerbose(Verbose)
+				cc.mon.SortByNameStatus(st)
+				// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
+				fmt.Printf("%s", strings.Repeat("\n", int(h)))
+				fmt.Printf("%5d %-30s %-5s %-30s\n", nth%10000, "Name", "Stat.", "Data")
+				fmt.Printf("%5s %-30s %-5s %-30s\n", "-----", "------------------------------", "-----", "-------------------------")
+				for ii, vv := range st {
+					if vv.Status == "up" {
+						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
+					} else {
+						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorRed, vv.Status, MiscLib.ColorReset, vv.LongName)
+					}
+				}
+			}
+
+			// xyzzy - nedd to listen for chagnes in Redis - then run this after each change.
+			showStatus(nil)
+
+			var wg sync.WaitGroup
+
+			ms.ListenForServer(showStatus, &wg)
+
+			wg.Wait() // wait forever - server runs in loop. -- On "exit" message it will
+
 			return nil
 		}
 	}
@@ -409,6 +468,17 @@ func main() {
 				cli.StringFlag{
 					Name:  "periodic, P",
 					Usage: "Set the frequency of displaying and run in a loop forever.",
+				},
+			},
+		},
+		{
+			Name:   "live-monitor",
+			Usage:  "Push Notification: Show the up/down status of monitored processes",
+			Action: create_LiveMonitor(),
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
 				},
 			},
 		},
