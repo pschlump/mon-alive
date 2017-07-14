@@ -21,6 +21,15 @@ import (
 // TODO ; sort the return set of items up/down - by name
 // TODO ; Add in notification destination and action for down items
 
+/*
+redis-cli -h 192.168.0.139
+192.168.0.139:6379> auth lLJSmkccYJiVEwskr1RM4MWIaBM
+OK
+192.168.0.139:6379> psubscribe '__key*__:expire*'
+-- Just pick up exipre
+192.168.0.139:6379> psubscribe '__key*__:monitor:* expire'			-- ?? just monitor expires(?)
+*/
+
 type ConfigItem struct {
 	Name         string                 `json:"Name"`         // Extended name for this item
 	TTL          uint64                 `json:"TTL"`          // How long before should have received PING on item
@@ -99,8 +108,9 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	conn.Cmd("SADD", "monitor:IAmAlive", itemName)
 	myStatus["status"] = "ok"
 	ms := lib.SVar(myStatus)
-	conn.Cmd("SET", "monitor::"+itemName, ms)
-	conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
+	//onn.Cmd("SET", "monitor::"+itemName, ms)
+	//conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
+	conn.Cmd("SETEX", "monitor::"+itemName, ms, ttl)
 }
 
 func (mon *MonIt) SetupStatus(listenAt string, fxStatus func() string, fxTest func() bool) {
