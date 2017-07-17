@@ -29,6 +29,10 @@ dump_config:
 up_down:
 	./mon-cli status -P 30
 
+new_up_down:
+	go build
+	./mon-cli live-monitor
+
 cp_to_linux_sys:
 	scp mon-cli.linux *.tmpl pschlump@192.168.0.140:/home/pschlump/bin
 

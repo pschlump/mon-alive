@@ -29,10 +29,14 @@ import (
 )
 
 /*
-TODO:
-	1. If "name" is not unique then error! - non-unique names result in "down" state.
-	2. See live-ping README.md for other ideas - and additions to this.
-	3. Add in notification destination and action for down items
+
+1. Issues
+	1.  xyzzyAddCRUD - CRUD on monitored items.
+
+
+SETUP in Redis:
+
+> config set notify-keyspace-events AKE
 
 Misc Notes:
 	Dir, _ = os.Getwd()
@@ -40,6 +44,9 @@ Misc Notes:
 https://github.com/yaronsumel/grapes -- Remote execution of commands via SSH on sets of computers.
 	-- this would be perfect for "ping" level 1 - to systems in live monitor
 	-- also colud do stuff like "ps" and grep for running process
+
+
+
 */
 
 // var message tr.Trx
@@ -100,11 +107,11 @@ func main() {
 	}
 	cc.MyStatus["cli"] = "y"
 
-	fmt.Fprintf(os.Stderr, "%s Before app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
+	// fmt.Fprintf(os.Stderr, "%s Before app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
 
 	app.Before = func(c *cli.Context) error {
 
-		fmt.Fprintf(os.Stderr, "%s In app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
+		// fmt.Fprintf(os.Stderr, "%s In app.Before , %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
 
 		DebugFlags := c.GlobalString("debug")
 		ds := strings.Split(DebugFlags, ",")
@@ -115,7 +122,7 @@ func main() {
 		// do setup - common function -- Need to be able to skip for i-am-alive remote!
 		cfg := c.GlobalString("cfg")
 		qdemolib.SetupRedisForTest(cfg)
-		fmt.Fprintf(os.Stderr, "%s should have global setup, %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
+		// fmt.Fprintf(os.Stderr, "%s should have global setup, %s %s\n", MiscLib.ColorGreen, godebug.LF(), MiscLib.ColorReset)
 		connTmp, conFlag := qdemolib.GetRedisClient()
 		if !conFlag {
 			fmt.Printf("Did not connect to redis\n")
@@ -185,8 +192,8 @@ func main() {
 
 			showStatus := func() {
 				nth++
-				st := cc.mon.GetStatusOfItemVerbose(Verbose)
-				cc.mon.SortByNameStatus(st)
+				st, _ := cc.mon.GetStatusOfItemVerbose(Verbose)
+				// cc.mon.SortByNameStatus(st)
 				// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
 				fmt.Printf("%s", strings.Repeat("\n", int(h)))
 				fmt.Printf("%5d %-30s %-5s %-30s\n", nth%10000, "Name", "Stat.", "Data")
@@ -234,31 +241,64 @@ func main() {
 
 			// SEE: https://redis.io/topics/notifications
 
-			ms.SetEventPattern("__keyspace@0__:expire monitor:*")
+			// ms.SetEventPattern("__keyevent@0__:expired")
+			ms.SetEventPattern("__keyevent@0__:expire*")
 
 			ms.ConnectToRedis() // Create the redis connection pool, alternative is ms.SetRedisPool(pool) // ms . SetRedisPool(pool *pool.Pool)
 			ms.SetRedisConnectInfo(qdemolib.ServerGlobal.RedisConnectHost, qdemolib.ServerGlobal.RedisConnectPort, qdemolib.ServerGlobal.RedisConnectAuth)
 			ms.SetupListen()
 
 			showStatus := func(dm map[string]interface{}) {
-				nth++
-				st := cc.mon.GetStatusOfItemVerbose(Verbose)
-				cc.mon.SortByNameStatus(st)
-				// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
-				fmt.Printf("%s", strings.Repeat("\n", int(h)))
-				fmt.Printf("%5d %-30s %-5s %-30s\n", nth%10000, "Name", "Stat.", "Data")
-				fmt.Printf("%5s %-30s %-5s %-30s\n", "-----", "------------------------------", "-----", "-------------------------")
-				for ii, vv := range st {
-					if vv.Status == "up" {
-						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
-					} else {
-						fmt.Printf("%4d: %-30s %s%-5s%s %-30s\n", ii, vv.Name, MiscLib.ColorRed, vv.Status, MiscLib.ColorReset, vv.LongName)
-					}
-				}
-			}
+				// fmt.Printf("dm=%+v\n", dm)
 
-			// xyzzy - nedd to listen for chagnes in Redis - then run this after each change.
-			showStatus(nil)
+				runIt := false
+
+				cmd_r, ok0 := dm["cmd"]
+				cmd, ok1 := cmd_r.(string)
+				itemKey_r, ok2 := dm["val"]
+
+				if ok0 && ok1 && ok2 && cmd == "expired" {
+
+					itemKey, ok3 := itemKey_r.(string)
+
+					if ok3 {
+						runIt = cc.mon.IsMonitoredItem(itemKey)
+					}
+
+				} // check for this having a key name passed in.
+
+				if ok0 && ok1 && cmd != "expired" { // cmd==timeout-call || cmd==at-top
+					runIt = true
+					// fmt.Printf("dm=%+v\n", dm)
+				}
+
+				if runIt {
+					st, hasChanged := cc.mon.GetStatusOfItemVerbose(Verbose)
+					if hasChanged {
+						if db9 {
+							fmt.Printf("For push to Socket.IO: st=%s\n", godebug.SVarI(st))
+						}
+						nth++
+						// cc.mon.SortByNameStatus(st)
+						// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
+						fmt.Printf("%s", strings.Repeat("\n", int(h)))
+						fmt.Printf("%5d %-35s %2s %-40s\n", nth%10000, "Name", "St", "Data")
+						fmt.Printf("%5s %-35s %2s %-40s\n", "-----", "-----------------------------------", "--", "-----------------------------------")
+						for ii, vv := range st {
+							vvName := vv.Name
+							if len(vvName) > 35 {
+								vvName = vvName[0:35]
+							}
+							if vv.Status == "up" {
+								fmt.Printf("%4d: %-35s %s%2s%s %-40s\n", ii, vvName, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
+							} else {
+								fmt.Printf("%4d: %-35s %s%2s%s %-40s\n", ii, vvName, MiscLib.ColorRed, "Dn", MiscLib.ColorReset, vv.LongName)
+							}
+						}
+					}
+				} // check for key being a monitored item
+
+			}
 
 			var wg sync.WaitGroup
 
@@ -269,6 +309,14 @@ func main() {
 			return nil
 		}
 	}
+
+	/*
+	   xyzzyAddCRUD - CRUD on monitored items.
+	   func (mon *MonIt) AddNewItem(itemName string, ttl uint64) { // xyzzy - additional params
+	   	/Users/corwin/go/src/github.com/pschlump/mon-alive/lib/monAlive.go:511
+	   func (mon *MonIt) RemoveItem(itemName string) {
+	   func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]interface{}) {
+	*/
 
 	create_Trace := func() func(*cli.Context) error {
 		return func(ctx *cli.Context) error {
@@ -482,6 +530,140 @@ func main() {
 				},
 			},
 		},
+		/*
+
+			, "Federated Auth Server":{
+					"Name":"Federated Auth Server http://localhost:9001/"
+				,	"TTL": 120
+				,	"RequiresPing": true
+				,	"PingUrl": "http://192.168.0.157:9001/api/status"
+				}
+
+			-k|--key		"Federated Auth Server"
+				-n|--name
+				-t|--ttl
+				-P|--ping
+				-u|--url
+
+		*/
+		{
+			Name:   "add-item",
+			Usage:  "Add new monitoed item",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+				cli.StringFlag{
+					Name:  "key, k",
+					Usage: "Primary Name of the service.",
+				},
+				cli.StringFlag{
+					Name:  "name, n",
+					Usage: "Full name of the service for error messages.",
+				},
+				cli.StringFlag{
+					Name:  "ttl, t",
+					Usage: "Timeout before assume that it is down. Default 120 sec.",
+				},
+				cli.StringFlag{
+					Name:  "ping, P",
+					Usage: "Requries a ping to see if really down. (-u/--url must be set)",
+				},
+				cli.StringFlag{
+					Name:  "url, u",
+					Usage: "URL to ping to verify up/down status.",
+				},
+			},
+		},
+		{
+			Name:   "rm-item",
+			Usage:  "remove monitored item",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+				cli.StringFlag{
+					Name:  "key, k",
+					Usage: "Primary Name of the service.",
+				},
+			},
+		},
+		{
+			Name:   "upd-item",
+			Usage:  "update monitored item",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+				cli.StringFlag{
+					Name:  "key, k",
+					Usage: "Primary Name of the service.",
+				},
+				cli.StringFlag{
+					Name:  "name, n",
+					Usage: "Full name of the service for error messages.",
+				},
+				cli.StringFlag{
+					Name:  "ttl, t",
+					Usage: "Timeout before assume that it is down. Default 120 sec.",
+				},
+				cli.StringFlag{
+					Name:  "ping, P",
+					Usage: "Requries a ping to see if really down. (-u/--url must be set)",
+				},
+				cli.StringFlag{
+					Name:  "url, u",
+					Usage: "URL to ping to verify up/down status.",
+				},
+			},
+		},
+		{
+			Name:   "enable-item",
+			Usage:  "Change existing item to enabled - turn on monetering",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+				cli.StringFlag{
+					Name:  "key, k",
+					Usage: "Primary Name of the service.",
+				},
+			},
+		},
+		{
+			Name:   "disable-item",
+			Usage:  "Change existing item to disabled - turn OFF monetering",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+				cli.StringFlag{
+					Name:  "key, k",
+					Usage: "Primary Name of the service.",
+				},
+			},
+		},
+		{
+			Name:   "list-available-item",
+			Usage:  "list of available items reporting that can be monitored",
+			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "verbose, v",
+					Usage: "Verbose output when status is displayed.",
+				},
+			},
+		},
 		{
 			Name:   "trace",
 			Usage:  "Trace calls to the server",
@@ -623,3 +805,4 @@ func teeToFile(fn string, s string) string {
 
 const db7 = false
 const db8 = false
+const db9 = false
