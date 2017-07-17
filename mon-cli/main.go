@@ -183,6 +183,76 @@ func main() {
 		}
 	}
 
+	//		Action: create_AddItem(), //  xyzzyAddCRUD - CRUD on monitored items.
+	create_AddItem := func() func(*cli.Context) error {
+		return func(ctx *cli.Context) error {
+
+			key := ctx.String("key")
+			name := ctx.String("name")
+			ttlstr := ctx.String("ttl")
+			ttl, err := strconv.ParseInt(ttlstr, 10, 64)
+			if err != nil {
+				ttl = 120
+			}
+			ping := ctx.Bool("ping")
+			url := ctx.String("url")
+
+			it := cc.mon.UpdateConfig()
+			if _, ok := it.Item[key]; !ok {
+				it.Item[key] = MonAliveLib.ConfigItem{
+					Name:         name,
+					TTL:          uint64(ttl),
+					RequiresPing: ping,
+					PingUrl:      url,
+				}
+				cc.mon.SetConfig(godebug.SVar(it))
+			} else {
+				fmt.Fprintf(os.Stderr, "Error: Unable to add %s - already exists - use `upd-item` instead?\n", key)
+			}
+
+			return nil
+		}
+	}
+
+	create_UpdItem := func() func(*cli.Context) error {
+		return func(ctx *cli.Context) error {
+
+			key := ctx.String("key")
+			name := ctx.String("name")
+			ttlstr := ctx.String("ttl")
+			ttl, err := strconv.ParseInt(ttlstr, 10, 64)
+			if err != nil {
+				ttl = 120
+			}
+			ping := ctx.Bool("ping")
+			url := ctx.String("url")
+
+			it := cc.mon.UpdateConfig()
+			it.Item[key] = MonAliveLib.ConfigItem{
+				Name:         name,
+				TTL:          uint64(ttl),
+				RequiresPing: ping,
+				PingUrl:      url,
+			}
+			cc.mon.SetConfig(godebug.SVar(it))
+
+			return nil
+		}
+	}
+
+	create_RmItem := func() func(*cli.Context) error {
+		return func(ctx *cli.Context) error {
+
+			key := ctx.String("key")
+
+			it := cc.mon.UpdateConfig()
+			delete(it.Item, key)
+			cc.mon.SetConfig(godebug.SVar(it))
+
+			return nil
+		}
+	}
+
 	create_Status := func() func(*cli.Context) error {
 		nth := 0
 		return func(ctx *cli.Context) error {
@@ -549,7 +619,7 @@ func main() {
 		{
 			Name:   "add-item",
 			Usage:  "Add new monitoed item",
-			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Action: create_AddItem(), //  xyzzyAddCRUD - CRUD on monitored items.
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "verbose, v",
@@ -567,7 +637,7 @@ func main() {
 					Name:  "ttl, t",
 					Usage: "Timeout before assume that it is down. Default 120 sec.",
 				},
-				cli.StringFlag{
+				cli.BoolFlag{
 					Name:  "ping, P",
 					Usage: "Requries a ping to see if really down. (-u/--url must be set)",
 				},
@@ -580,7 +650,7 @@ func main() {
 		{
 			Name:   "rm-item",
 			Usage:  "remove monitored item",
-			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Action: create_RmItem(),
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "verbose, v",
@@ -595,7 +665,7 @@ func main() {
 		{
 			Name:   "upd-item",
 			Usage:  "update monitored item",
-			Action: create_LiveMonitor(), //  xyzzyAddCRUD - CRUD on monitored items.
+			Action: create_UpdItem(),
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "verbose, v",
