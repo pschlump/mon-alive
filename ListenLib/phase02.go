@@ -109,7 +109,7 @@ func NewMsCfgType(qName, qReply string) (ms *MsCfgType) {
 		Err:                err,                           //
 		Name:               qName,                         // Name of message Q that will be published on
 		ReplyListenQ:       qr,                            // This is the lisened to by client for wakie-wakie on client side
-		TickInMilliseconds: 10000,                         // 100 milliseconds
+		TickInMilliseconds: 100,                           // 100 milliseconds
 		ReplyFx:            make(map[string]*ReplyFxType), //
 	}
 	return
@@ -221,26 +221,9 @@ func (ms *MsCfgType) ListenForServer(doWork WorkFuncType, wg *sync.WaitGroup) { 
 				}
 
 				arb := make(map[string]interface{})
-				err := json.Unmarshal([]byte(sr.Message), &arb)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "%sError: %s --->>>%s<<<--- AT: %s%s\n", MiscLib.ColorRed, err, sr.Message, godebug.LF(), MiscLib.ColorReset)
-				} else {
-
-					cmd := ""
-					cmd_x, ok := arb["cmd"]
-					if ok {
-						cmd_s, ok := cmd_x.(string)
-						if ok {
-							cmd = cmd_s
-						}
-					}
-					if cmd == "exit-now" {
-						break
-					}
-
-					doWork(arb)
-
-				}
+				arb["cmd"] = "expired"
+				arb["val"] = string(sr.Message)
+				doWork(arb)
 
 			case <-ms.timeout: // the read from ms.subChan has timed out
 
@@ -484,7 +467,7 @@ func UUIDAsStrPacked() (s_id string) {
 	}
 }
 
-var db1 = true
+var db1 = false
 var db2 = false
 var db3 = false
 

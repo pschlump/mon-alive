@@ -600,22 +600,6 @@ func main() {
 				},
 			},
 		},
-		/*
-
-			, "Federated Auth Server":{
-					"Name":"Federated Auth Server http://localhost:9001/"
-				,	"TTL": 120
-				,	"RequiresPing": true
-				,	"PingUrl": "http://192.168.0.157:9001/api/status"
-				}
-
-			-k|--key		"Federated Auth Server"
-				-n|--name
-				-t|--ttl
-				-P|--ping
-				-u|--url
-
-		*/
 		{
 			Name:   "add-item",
 			Usage:  "Add new monitoed item",

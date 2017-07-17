@@ -15,6 +15,9 @@ import (
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 )
 
+// xyzzyPrefixConfig - more diverse and confgurable prefix list
+// xyzzySortTypeName c/Countris/SortItemStatus
+
 // TODO ; 1. Get list of up/down systems based on Group search -- ONLY check systesm that match the group
 // TODO ; 1. Get list groups
 
@@ -52,8 +55,9 @@ type ConfigMonitor struct {
 }
 
 type MonIt struct {
-	GetConn  func() (conn *redis.Client)
-	FreeConn func(conn *redis.Client)
+	GetConn    func() (conn *redis.Client)
+	FreeConn   func(conn *redis.Client)
+	prevStatus []ItemStatus
 }
 
 func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Client)) (rv *MonIt) {
@@ -69,6 +73,7 @@ func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Cli
 	return
 }
 
+// Pull current configuraiton from Redis - Allows for changes in config to take place after program starts running.
 func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	rv.MinTTL = 30
 	conn := mon.GetConn()
@@ -97,6 +102,7 @@ func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	return
 }
 
+// Note that  a particualr resources is up and sending "alive" pings.
 func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{}) {
 	u := mon.UpdateConfig()
 	conn := mon.GetConn()
@@ -116,6 +122,7 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 	conn.Cmd("SETEX", "monitor::"+itemName, ms, ttl)
 }
 
+// HTTP server that handles /api/status with an I AM ALIVE message.
 func (mon *MonIt) SetupStatus(listenAt string, fxStatus func() string, fxTest func() bool) {
 
 	status := func(res http.ResponseWriter, req *http.Request) {
@@ -281,6 +288,7 @@ func DoGet(url string) (string, bool) {
 		return "Error", false
 	}
 	r1.Body.Close()
+	// xyzzyPrefixConfig - more diverse and confgurable prefix list
 	if string(rv[0:6]) == ")]}',\n" {
 		rv = rv[6:]
 	}
@@ -302,6 +310,9 @@ func DoGet(url string) (string, bool) {
 //	ok = e
 //	return
 //}
+
+// ---------------------- sort -------------------------------------------------------------------------------------------------------------
+// xyzzySortTypeName c/Countris/SortItemStatus
 
 type Countries []ItemStatus
 
@@ -331,10 +342,35 @@ type ItemStatus struct {
 	LongName string
 }
 
+// New: Sun Jul 16 06:15:11 MDT 2017
+func (mon *MonIt) IsMonitoredItem(itemKey string) bool {
+
+	lenMonitor := len("monitor::")
+	if len(itemKey) <= lenMonitor {
+		return false
+	}
+
+	key := itemKey[lenMonitor:]
+	// fmt.Printf("key=[%s], %s\n", key, godebug.LF())
+
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	it, err := conn.Cmd("SISMEMBER", "monitor:IAmAlive", key).Int()
+	if err != nil {
+		return false
+	}
+	return (it == 1)
+}
+
 // GetStatusOfItemVerbose returns the set of items that is NOT running that should be running
 // Eventually - check via circuit checs for items that require ping
 // URL: /api/mon/get-notify-item
-func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus) {
+// This will return a sorted by name array and true iff the name/status in the array has
+// changed since last time.
+func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus, hasChanged bool) {
+
+	// hasChanged = true
+
 	// get all items - get notify items - do DIFF and see if not being pinged
 	// get the set of items that are being monitored -- monitor:IAmAlive
 	conn := mon.GetConn()
@@ -370,7 +406,9 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus) {
 			if !up {
 				Item := u.Item[vv]
 				if Item.RequiresPing {
-					fmt.Printf("Ping required to verify it is down, %s\n", Item.PingUrl)
+					if db5 {
+						fmt.Printf("Ping required to verify it is down, %s\n", Item.PingUrl)
+					}
 				}
 			}
 			if !up {
@@ -404,6 +442,27 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus) {
 			}
 		}
 	}
+
+	mon.SortByNameStatus(rv)
+
+	if len(rv) != len(mon.prevStatus) {
+		hasChanged = true
+		fmt.Printf("*** Length %d %d\n", len(rv), len(mon.prevStatus))
+		// } else if !reflect.DeepEqual(rv, mon.prevStatus) {
+		// 	hasChanged = true
+	} else {
+		for ii, vv := range rv {
+			aa := mon.prevStatus[ii]
+			if aa.Name != vv.Name || aa.Status != vv.Status {
+				fmt.Printf("*** Name/Status %s %s, %s %s\n", aa.Name, vv.Name, aa.Status, vv.Status)
+				hasChanged = true
+				break
+			}
+		}
+	}
+
+	mon.prevStatus = rv
+
 	return
 }
 
@@ -492,6 +551,18 @@ func (mon *MonIt) AddNewItem(itemName string, ttl uint64) { // xyzzy - additiona
 		return
 	}
 	// fmt.Printf("AT: %s\n", godebug.LF())
+
+}
+
+// Set a new config in Redis.  's' is the JSON of rv.Item...
+func (mon *MonIt) SetConfig(s string) {
+	conn := mon.GetConn()
+	defer mon.FreeConn(conn)
+	err := conn.Cmd("SET", "monitor:config", s).Err
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		return
+	}
 
 }
 
@@ -660,5 +731,6 @@ const db1 = false
 const db2 = false
 const db3 = false
 const db4 = false
+const db5 = false
 
 /* vim: set noai ts=4 sw=4: */
