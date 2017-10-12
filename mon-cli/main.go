@@ -1,3 +1,5 @@
+// Copyright (C) Philip Schlump, 2016-2017.
+
 package main
 
 import (
@@ -31,7 +33,7 @@ import (
 /*
 
 1. Issues
-	1.  xyzzyAddCRUD - CRUD on monitored items.
+	+1.  xyzzyAddCRUD - CRUD on monitored items.
 
 
 SETUP in Redis:
@@ -301,7 +303,12 @@ func main() {
 
 		return func(ctx *cli.Context) error {
 			Verbose := ctx.Bool("verbose")
-			h, _ := GetSize()
+			Quiet := ctx.Bool("quiet")
+			File := ctx.String("file")
+			h := uint(80)
+			if !Quiet {
+				h, _ = GetSize()
+			}
 
 			ms := ListenLib.NewMsCfgType("trx:listen", "")
 
@@ -348,21 +355,28 @@ func main() {
 						if db9 {
 							fmt.Printf("For push to Socket.IO: st=%s\n", godebug.SVarI(st))
 						}
-						nth++
-						// cc.mon.SortByNameStatus(st)
-						// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
-						fmt.Printf("%s", strings.Repeat("\n", int(h)))
-						fmt.Printf("%5d %-35s %2s %-40s\n", nth%10000, "Name", "St", "Data")
-						fmt.Printf("%5s %-35s %2s %-40s\n", "-----", "-----------------------------------", "--", "-----------------------------------")
-						for ii, vv := range st {
-							vvName := vv.Name
-							if len(vvName) > 35 {
-								vvName = vvName[0:35]
-							}
-							if vv.Status == "up" {
-								fmt.Printf("%4d: %-35s %s%2s%s %-40s\n", ii, vvName, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
-							} else {
-								fmt.Printf("%4d: %-35s %s%2s%s %-40s\n", ii, vvName, MiscLib.ColorRed, "Dn", MiscLib.ColorReset, vv.LongName)
+						if File != "" {
+							// File := ctx.String("file")
+							ioutil.WriteFile(File, []byte(godebug.SVarI(st)), 0640)
+						}
+
+						if !Quiet {
+							nth++
+							// cc.mon.SortByNameStatus(st)
+							// fmt.Printf("After 2 : %s\n", lib.SVarI(st))
+							fmt.Printf("%s", strings.Repeat("\n", int(h)))
+							fmt.Printf("%5d %-35s %2s %-40s\n", nth%10000, "Name", "St", "Data")
+							fmt.Printf("%5s %-35s %2s %-40s\n", "-----", "-----------------------------------", "--", "-----------------------------------")
+							for ii, vv := range st {
+								vvName := vv.Name
+								if len(vvName) > 35 {
+									vvName = vvName[0:35]
+								}
+								if vv.Status == "up" {
+									fmt.Printf("%4d: %-35s %s%2s%s %-40s\n", ii, vvName, MiscLib.ColorGreen, vv.Status, MiscLib.ColorReset, vv.Data)
+								} else {
+									fmt.Printf("%4d: %-33s %s%4s %-40s%s\n", ii, vvName, MiscLib.ColorRed, "down", vv.LongName, MiscLib.ColorReset)
+								}
 							}
 						}
 					}
@@ -597,6 +611,14 @@ func main() {
 				cli.BoolFlag{
 					Name:  "verbose, v",
 					Usage: "Verbose output when status is displayed.",
+				},
+				cli.BoolFlag{
+					Name:  "quiet, q",
+					Usage: "No terminal output - just write to file.",
+				},
+				cli.StringFlag{
+					Name:  "file, f",
+					Usage: "Dump output to a file.",
 				},
 			},
 		},

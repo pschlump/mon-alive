@@ -454,7 +454,8 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus, hasChange
 		for ii, vv := range rv {
 			aa := mon.prevStatus[ii]
 			if aa.Name != vv.Name || aa.Status != vv.Status {
-				fmt.Printf("*** Name/Status %s %s, %s %s\n", aa.Name, vv.Name, aa.Status, vv.Status)
+				t := time.Now()
+				fmt.Printf("*** Name/Status %s %s, %s %s @ %s\n", aa.Name, vv.Name, aa.Status, vv.Status, t.Format("2006-02-01 15:04:05"))
 				hasChanged = true
 				break
 			}

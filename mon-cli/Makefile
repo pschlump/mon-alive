@@ -30,8 +30,10 @@ up_down:
 	./mon-cli status -P 30
 
 new_up_down:
-	go build
 	./mon-cli live-monitor
+
+file_output:
+	./mon-cli live-monitor --quiet --file /Users/corwin/go/src/github.com/pschlump/Go-FTL/server/goftl/testdata/9001/www/lm/data.json 2>,log.out &
 
 cp_to_linux_sys:
 	scp mon-cli.linux *.tmpl pschlump@192.168.0.140:/home/pschlump/bin
