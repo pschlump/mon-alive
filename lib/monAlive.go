@@ -81,7 +81,8 @@ func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Will use a default configration that is empty.\n")
+		s = defauiltConfig
 		return
 	}
 	err = json.Unmarshal([]byte(s), &rv)
@@ -113,13 +114,16 @@ func (mon *MonIt) SendIAmAlive(itemName string, myStatus map[string]interface{})
 		return                                              // not a monitored item at this time - just return
 	}
 	ttl := cfgForItem.TTL
+	// fmt.Printf("----- Tell Redis I am Alive [%s] -----------, %s\n", itemName, godebug.LF())
+	// conn.Cmd("SET", "monitor::connectd", "yes")
 	conn.Cmd("SREM", "monitor:potentialItem", itemName) // Actually monitoring this item
 	conn.Cmd("SADD", "monitor:IAmAlive", itemName)
 	myStatus["status"] = "ok"
 	ms := lib.SVar(myStatus)
-	//onn.Cmd("SET", "monitor::"+itemName, ms)
-	//conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
-	conn.Cmd("SETEX", "monitor::"+itemName, ms, ttl)
+	// fmt.Printf("\tsetex \"monitor::%s\" %q %v\n", itemName, ms, ttl)
+	conn.Cmd("SET", "monitor::"+itemName, ms)
+	conn.Cmd("EXPIRE", "monitor::"+itemName, ttl)
+	// conn.Cmd("SETEX", "monitor::"+itemName, ms, ttl) // Set and Expire
 }
 
 // HTTP server that handles /api/status with an I AM ALIVE message.
@@ -279,12 +283,16 @@ func DoGet(url string) (string, bool) {
 	client := http.Client{nil, nil, nil, 0}
 	r1, e0 := client.Get(url)
 	if e0 != nil {
-		fmt.Printf("\tError: %v, %s\n", e0, godebug.LF())
+		if dbErr01 {
+			fmt.Printf("\tError: %v, %s\n", e0, godebug.LF())
+		}
 		return "Error", false
 	}
 	rv, e1 := ioutil.ReadAll(r1.Body)
 	if e1 != nil {
-		fmt.Printf("\tError: %v, %s\n", e1, godebug.LF())
+		if dbErr01 {
+			fmt.Printf("\tError: %v, %s\n", e1, godebug.LF())
+		}
 		return "Error", false
 	}
 	r1.Body.Close()
@@ -295,6 +303,8 @@ func DoGet(url string) (string, bool) {
 
 	return string(rv), true
 }
+
+const dbErr01 = false
 
 //func SendIAmAlive(item string, note string) (ok bool, rv string) {
 //	client := http.Client{nil, nil, nil, 0}
@@ -727,6 +737,16 @@ func (mon *MonIt) SendTrxState(state, trxId string) {
 		fmt.Printf("Error: %s publishing monitor:trx-state\n", err)
 	}
 }
+
+var defauiltConfig = `{
+	"Item":{
+		  "remote:206-server": {
+				"Name":"www.2c-why.com, etc..."
+			,	"TTL": 120
+			}
+	}
+}
+`
 
 const db1 = false
 const db2 = false
