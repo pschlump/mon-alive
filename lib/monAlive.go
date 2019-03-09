@@ -257,7 +257,8 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 	defer mon.FreeConn(conn)
 	it, err := conn.Cmd("SMEMBERS", "monitor:IAmAlive").List()
 	if err != nil {
-		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s\n", err)
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s, AT:%s\n", err, godebug.LF())
+		os.Exit(1)
 		return
 	}
 	// Iterate over set and check to see what keys are missing
@@ -387,7 +388,8 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus, hasChange
 	defer mon.FreeConn(conn)
 	it, err := conn.Cmd("SMEMBERS", "monitor:IAmAlive").List()
 	if err != nil {
-		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s\n", err)
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s, AT:%s\n", err, godebug.LF())
+		os.Exit(1)
 		return
 	}
 	u := mon.UpdateConfig()
@@ -697,7 +699,8 @@ func (mon *MonIt) GetListOfPotentialItem() (rv []string) {
 	defer mon.FreeConn(conn)
 	it, err := conn.Cmd("SMEMBERS", "monitor:potentialItem").List()
 	if err != nil {
-		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s\n", err)
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s, at:%s\n", err, godebug.LF())
+		os.Exit(1)
 		return
 	}
 	rv = it

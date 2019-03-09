@@ -12,22 +12,6 @@
 			,	"RequiresPing": true
 			,	"PingUrl": "http://192.168.0.182:80/whatever"
 			}
-		, "ms:get-bot":{
-				"Name":"Micro Service - Get-Bot"
-			,	"TTL": 120
-			}
-		, "ms:qr-img-decode": {
-				"Name":"Micro Service - QR-Image Decode"
-			,	"TTL": 120
-			}
-		, "ms:chat-bot":{
-				"Name":"Micro Service - Chat-Bot"
-			,	"TTL": 120
-			}
-		, "ms:tracer2-bot":{
-				"Name":"Micro Service - Tracer2-Bot"
-			,	"TTL": 120
-			}
 	 	, "ping:alive":{
 				"Name":"Check Remote Services"
 			,	"TTL": 120
@@ -36,11 +20,13 @@
 				"Name":"www.2c-why.com, etc..."
 			,	"TTL": 120
 			}
-		, "Go-FTL:www.go-class.com":{
-				"Name":"www.go-class.com http://localhost:17040/"
+		, "remote:t432z.com": {
+				"Name":"www.t432z.com, etc..."
 			,	"TTL": 120
-			,	"RequiresPing": true
-			,	"PingUrl": "http://192.168.0.157:17040/api/status"
+			}
+		, "local:geth182a": {
+				"Name":"geth 182 a"
+			,	"TTL": 120
 			}
 		, "Go-FTL:www.redux-react-class.com":{
 				"Name":"www.redux-class.com http://localhost:8088/"

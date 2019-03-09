@@ -351,6 +351,7 @@ func main() {
 
 				if runIt {
 					st, hasChanged := cc.mon.GetStatusOfItemVerbose(Verbose)
+					fmt.Printf("st=%s hasChanged=%v, %s\n", godebug.SVarI(st), hasChanged, godebug.LF())
 					if hasChanged {
 						if db9 {
 							fmt.Printf("For push to Socket.IO: st=%s\n", godebug.SVarI(st))
