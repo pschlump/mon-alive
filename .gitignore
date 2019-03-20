@@ -41,3 +41,12 @@ _testmain.go
 *.exe
 *.test
 *.prof
+mon-alive
+mon-cli/cfg0.json-*.prev
+list-client.redis
+mon-cli/idea.1
+mon-cli/note.0
+mon-cli/note.4
+monitor.redis
+go.sum
+	defect.1
