@@ -1,0 +1,16 @@
+{
+	"Item":{
+		  "QR Micro Service @ http://auth.beefchain.com:9022/":{
+				"Name":"qr-micro-service http://192.154.97.75:9022/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://192.154.97.75:9022/api/v1/status"
+			}
+		, "Federated Auth Server":{
+				"Name":"Federated Auth Server http://192.154.97.75:9017/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://192.154.97.75:9017/Status"
+			}
+	}
+}

@@ -1,0 +1,4 @@
+{
+	"RedisConnectHost":"127.0.0.1",
+	"RedisConnectAuth":"__ENV__:REDIS_AUTH"
+}
