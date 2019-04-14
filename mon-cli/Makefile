@@ -43,7 +43,7 @@ deploy_74:
 	echo ssh pschlump@192.154.97.74 "mkdir -p ./tools/mon-cli"
 	-echo ssh pschlump@192.154.97.74 "mv ./tools/mon-cli/mon-cli.linux ,aaaaa"
 	echo scp *.linux pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
-	scp prod-cfg0.json pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
+	scp prod-cfg0.json LICENSE pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
 	scp Makefile pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
 	scp prod-global-cfg.json pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
 

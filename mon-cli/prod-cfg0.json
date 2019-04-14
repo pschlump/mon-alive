@@ -12,5 +12,11 @@
 			,	"RequiresPing": true
 			,	"PingUrl": "http://192.154.97.75:9017/Status"
 			}
+		, "Random Oracle @ 2c-why.com":{
+				"Name":"Random Oracle @ http://www.2c-why.com/Ran/RandomValue"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://www.2c-why.com/Ran/RandomValue"
+			}
 	}
 }
