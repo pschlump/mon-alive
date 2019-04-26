@@ -170,11 +170,11 @@ func Test_MonAliveLib(t *testing.T) {
 			}
 			if test.chk == "in-list" {
 				if !lib.InArray(test.itemName, rv) {
-					t.Errorf("Test %2d, Check to see if in-list, did not find it [%s], list %s\n", test.itemName, lib.SVarI(rv))
+					t.Errorf("Test %2d, Check to see if in-list, did not find it [%s], list %s\n", ii, test.itemName, lib.SVarI(rv))
 				}
 			} else if test.chk == "not-in" {
 				if lib.InArray(test.itemName, rv) {
-					t.Errorf("Test %2d, Check to see if not-in-list, found it [%s], list %s\n", test.itemName, lib.SVarI(rv))
+					t.Errorf("Test %2d, Check to see if not-in-list, found it [%s], list %s\n", ii, test.itemName, lib.SVarI(rv))
 				}
 			}
 		case "GetItemStatus":

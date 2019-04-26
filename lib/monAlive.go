@@ -58,6 +58,7 @@ type MonIt struct {
 	GetConn    func() (conn *redis.Client)
 	FreeConn   func(conn *redis.Client)
 	prevStatus []ItemStatus
+	db_flag    map[string]bool
 }
 
 func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Client)) (rv *MonIt) {
@@ -69,8 +70,13 @@ func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Cli
 	rv = &MonIt{
 		GetConn:  getConn,
 		FreeConn: freeConn,
+		db_flag:  make(map[string]bool),
 	}
 	return
+}
+
+func (mon *MonIt) SetDebugFlags(db map[string]bool) {
+	mon.db_flag = db
 }
 
 // Pull current configuraiton from Redis - Allows for changes in config to take place after program starts running.
@@ -214,7 +220,9 @@ func (mon *MonIt) SendPeriodicIAmAlive(itemName string) {
 			TTL:  120,
 			Name: itemName,
 		}
-		fmt.Printf("Using Default Config, for %s\n", itemName)
+		if mon.db_flag["MonAliveLib.report-config"] {
+			fmt.Printf("Using Default Config, for %s\n", itemName)
+		}
 	}
 	ttl := cfgForItem.TTL
 
