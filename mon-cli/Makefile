@@ -39,12 +39,12 @@ cp_to_linux_sys:
 	scp mon-cli.linux *.tmpl pschlump@192.168.0.140:/home/pschlump/bin
 
 deploy_74:
-	GOOS=linux go build -o mon-cli.linux .
+	echo GOOS=linux go build -o mon-cli.linux .
 	echo ssh pschlump@192.154.97.74 "mkdir -p ./tools/mon-cli"
 	-echo ssh pschlump@192.154.97.74 "mv ./tools/mon-cli/mon-cli.linux ,aaaaa"
 	echo scp *.linux pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
 	scp prod-cfg0.json LICENSE pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
-	scp Makefile pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
-	scp prod-global-cfg.json pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
+	echo scp Makefile pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
+	echo scp prod-global-cfg.json pschlump@192.154.97.74:/home/pschlump/tools/mon-cli
 
 

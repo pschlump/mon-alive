@@ -18,5 +18,23 @@
 			,	"RequiresPing": true
 			,	"PingUrl": "http://www.2c-why.com/Ran/RandomValue"
 			}
+		, "PDF Micro Service @ http://auth.beefchain.com:9021/":{
+				"Name":"qr-micro-service http://192.154.97.75:9021/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://192.154.97.75:9021/api/v1/status"
+			}
+		, "Email Micro Service @ http://auth.beefchain.com:9020/":{
+				"Name":"email-micro-service http://192.154.97.75:9020/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://192.154.97.75:9020/api/v1/status"
+			}
+		, "QR-Short @ http://www.t432z.com/status":{
+				"Name":"QR Short http://www.t432z.com/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://www.t432z.com/status"
+			}
 	}
 }
