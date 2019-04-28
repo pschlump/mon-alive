@@ -26,6 +26,9 @@ load_prod_config:
 dump_config:
 	./mon-cli dump --file -
 
+dump_config_pp:
+	./mon-cli dump --file - | check-json-syntax -p
+
 up_down:
 	./mon-cli status -P 30
 
