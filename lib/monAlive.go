@@ -37,15 +37,19 @@ SEE: https://redis.io/topics/notifications
 */
 
 type ConfigItem struct {
-	Name         string                 `json:"Name"`         // Extended name for this item
-	TTL          uint64                 `json:"TTL"`          // How long before should have received PING on item
-	RequiresPing bool                   `json:"RequiresPing"` // To determine if it is alive requires a "ping" -- Maybe keep track of delta-t on last ping and only so often
-	PingUrl      string                 `json:"PingUrl"`      // URL to do "get" on to ping item -- http://localhost:16040/api/status for example
-	Group        []string               `json:"Group"`        // Set of groups that this belongs to "host":"virtual-host", "host":"goftl-server"
-	CdTo         string                 `json:"CdTo"`         // Direcotry to chagne to before run
-	CmdToRun     string                 `json:"CmdToRun"`     // Command to run when notification is needed.
-	seen         bool                   `json:"-"`            // marker - what has been seen, so can find not seen and report as down.
-	Extra        map[string]interface{} // Other Config Items...
+	Name               string                 `json:"Name"`               // Extended name for this item
+	TTL                uint64                 `json:"TTL"`                // How long before should have received PING on item
+	RequiresPing       bool                   `json:"RequiresPing"`       // To determine if it is alive requires a "ping" -- Maybe keep track of delta-t on last ping and only so often
+	PingUrl            string                 `json:"PingUrl"`            // URL to do "get" on to ping item -- http://localhost:16040/api/status for example
+	Group              []string               `json:"Group"`              // Set of groups that this belongs to "host":"virtual-host", "host":"goftl-server"
+	CdTo               string                 `json:"CdTo"`               // Direcotry to chagne to before run
+	CmdToRun           string                 `json:"CmdToRun"`           // Command to run when notification is needed.
+	NotifThreshold     int                    `json:"NotifThreshold"`     // new: Number of misssed events before Notification. Say 4.
+	RemediateThreshold int                    `json:"RemediateThreshold"` // new: Number of misseed before remediation is run. Say 3.
+	RemediateCdTo      string                 `json:"RemediateCdTo"`      // new: Direcotry to chagne to before run
+	RemediateCmdToRun  string                 `json:"RemediateCmdToRun"`  // new: Command to run when remediateion is needed.
+	seen               bool                   `json:"-"`                  // marker - what has been seen, so can find not seen and report as down.
+	Extra              map[string]interface{} // Other Config Items...
 }
 
 type ConfigMonitor struct {
@@ -396,7 +400,7 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus, hasChange
 	defer mon.FreeConn(conn)
 	it, err := conn.Cmd("SMEMBERS", "monitor:IAmAlive").List()
 	if err != nil {
-		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s, AT:%s\n", err, godebug.LF())
+		fmt.Printf("Error getting 'SMEMBERS', 'monitor:IAmAlive', err=%s, AT:%s -- Exit Will Occure\n", err, godebug.LF())
 		os.Exit(1)
 		return
 	}
