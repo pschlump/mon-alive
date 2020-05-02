@@ -134,7 +134,7 @@ func Test_MonAliveLib(t *testing.T) {
 		t.Fatalf("Error connecting to Redis - fatal\n")
 		os.Exit(1)
 	}
-	mon := NewMonIt(func() *redis.Client { return monClient }, func(conn *redis.Client) {})
+	mon := NewMonIt(func() *redis.Client { return monClient }, func(conn *redis.Client) {}, os.Stderr)
 
 	conn, _ := qdemolib.GetRedisClient()
 

@@ -11,13 +11,12 @@ import (
 	"strconv"
 	"time"
 
-	JsonX "github.com/pschlump/JSONx"
-
 	"github.com/pschlump/Go-FTL/server/cfg"
 	"github.com/pschlump/Go-FTL/server/goftlmux"
 	"github.com/pschlump/Go-FTL/server/httpmux"
 	"github.com/pschlump/Go-FTL/server/lib"
 	"github.com/pschlump/Go-FTL/server/mid"
+	JsonX "github.com/pschlump/JSONx"
 	"github.com/pschlump/MiscLib"
 	"github.com/pschlump/godebug"
 	MonAliveLib "github.com/pschlump/mon-alive/lib"
@@ -67,17 +66,21 @@ func (hdlr *MonAliveType) InitializeWithConfigData(next http.Handler, gCfg *cfg.
 }
 
 func (hdlr *MonAliveType) PreValidate(gCfg *cfg.ServerGlobalConfigType, cfgData map[string]interface{}, serverName string, pNo, callNo int) (err error) {
-	hdlr.mon = MonAliveLib.NewMonIt(func() (conn *redis.Client) {
-		var err error
-		conn, err = hdlr.g_cfg.RedisPool.Get()
-		if err != nil {
-			logrus.Infof(`{"msg":"Error %s Unable to get redis pooled connection.","LineFile":%q}`+"\n", err, godebug.LF())
+	hdlr.mon = MonAliveLib.NewMonIt(
+		func() (conn *redis.Client) {
+			var err error
+			conn, err = hdlr.g_cfg.RedisPool.Get()
+			if err != nil {
+				logrus.Infof(`{"msg":"Error %s Unable to get redis pooled connection.","LineFile":%q}`+"\n", err, godebug.LF())
+				return
+			}
 			return
-		}
-		return
-	}, func(conn *redis.Client) {
-		hdlr.g_cfg.RedisPool.Put(conn)
-	})
+		},
+		func(conn *redis.Client) {
+			hdlr.g_cfg.RedisPool.Put(conn)
+		},
+		os.Stderr,
+	)
 	return
 }
 
@@ -143,7 +146,7 @@ func NewMonAliveMiddlwareServer(n http.Handler, p []string, Cfg string) *MonAliv
 		fmt.Printf("Did not connect to redis\n")
 		os.Exit(1)
 	}
-	hh.mon = MonAliveLib.NewMonIt(func() *redis.Client { return conn }, func(conn *redis.Client) {})
+	hh.mon = MonAliveLib.NewMonIt(func() *redis.Client { return conn }, func(conn *redis.Client) {}, os.Stderr)
 
 	return hh
 }

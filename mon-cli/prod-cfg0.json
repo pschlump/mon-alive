@@ -36,5 +36,42 @@
 			,	"RequiresPing": true
 			,	"PingUrl": "http://www.t432z.com/status"
 			}
+		, "Luggage Demo @ http://52.11.198.235/":{
+				"Name":"Luggage Demo @ http://52.11.198.235/"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}
+		, "BeefChain PVP @ http://34.215.214.131/":{
+				"Name":"BeefChain PVP @ http://34.215.214.131/"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}
+		, "SheepChain Demo @ http://34.218.87.91/":{
+				"Name":"SheepChain Demo @ http://34.218.87.91/"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}
+	 	, "ping:alive":{
+				"Name":"Check Remote Services"
+			,	"TTL": 120
+			}
+		,"PVP Dev @ http://54.200.43.194":{
+				"Name":"PVP Dev @ http://54.200.43.194"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}
+		,"SheepChain Service @ http://34.208.171.44":{
+				"Name":"SheepChain Service @ http://34.208.171.44"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}
+
+		, "QR Relay Service @ http://agroledge.com:9025/":{
+				"Name":"qr-micro-service http://192.154.97.75:9025/"
+			,	"TTL": 120
+			,	"RequiresPing": true
+			,	"PingUrl": "http://192.154.97.75:9025/api/v1/status"
+			}
+
 	}
 }

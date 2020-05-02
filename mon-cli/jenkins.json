@@ -1,0 +1,6 @@
+
+		, "Jenkins @ http://54.203.168.89:8080/":{
+				"Name":"Jenkins @ http://54.203.168.89:8080/"
+			,	"TTL": 120
+			,	"RequiresPing": false
+			}

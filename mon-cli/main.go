@@ -22,12 +22,11 @@ import (
 	"github.com/pschlump/MiscLib"
 	"github.com/pschlump/godebug"
 	"github.com/pschlump/json"
+	"github.com/pschlump/mon-alive/ListenLib"
 	"github.com/pschlump/mon-alive/lib"
 	"github.com/pschlump/mon-alive/qdemolib"
 	"github.com/pschlump/radix.v2/redis" // Modified pool to have NewAuth for authorized connections
 	"github.com/urfave/cli"
-
-	"github.com/pschlump/mon-alive/ListenLib"
 )
 
 /*
@@ -132,7 +131,7 @@ func main() {
 		}
 		cc.conn = connTmp
 
-		monTmp := MonAliveLib.NewMonIt(func() *redis.Client { return cc.conn }, func(conn *redis.Client) {})
+		monTmp := MonAliveLib.NewMonIt(func() *redis.Client { return cc.conn }, func(conn *redis.Client) {}, os.Stderr)
 		cc.mon = monTmp
 
 		return nil

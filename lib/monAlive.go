@@ -63,9 +63,10 @@ type MonIt struct {
 	FreeConn   func(conn *redis.Client)
 	prevStatus []ItemStatus
 	db_flag    map[string]bool
+	logFile    *os.File
 }
 
-func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Client)) (rv *MonIt) {
+func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Client), logFile *os.File) (rv *MonIt) {
 	getConn := GetConn
 	freeConn := FreeConn
 	if freeConn == nil {
@@ -75,6 +76,7 @@ func NewMonIt(GetConn func() (conn *redis.Client), FreeConn func(conn *redis.Cli
 		GetConn:  getConn,
 		FreeConn: freeConn,
 		db_flag:  make(map[string]bool),
+		logFile:  logFile,
 	}
 	return
 }
@@ -90,14 +92,20 @@ func (mon *MonIt) UpdateConfig() (rv ConfigMonitor) {
 	defer mon.FreeConn(conn)
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
-		fmt.Fprintf(os.Stderr, "Will use a default configration that is empty.\n")
+		// fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		// fmt.Fprintf(os.Stderr, "Will use a default configration that is empty.\n")
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+			fmt.Fprintf(mon.logFile, "Will use a default configration that is empty.\n")
+		}
 		s = defauiltConfig
 		return
 	}
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 
@@ -192,7 +200,9 @@ func (mon *MonIt) SendIAmShutdown(itemName string) {
 	err := conn.Cmd("DEL", "monitor::"+itemName).Err
 	// fmt.Printf("AT: %s, Del on monitor::%s -- err=%s\n", godebug.LF(), itemName, err)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		}
 		return
 	}
 }
@@ -205,7 +215,9 @@ func (mon *MonIt) SendIFailed(itemName string) {
 	err := conn.Cmd("DEL", "monitor::"+itemName).Err
 	// fmt.Printf("AT: %s, Del on monitor::%s -- err=%s\n", godebug.LF(), itemName, err)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		}
 		return
 	}
 }
@@ -281,7 +293,9 @@ func (mon *MonIt) GetNotifyItem() (rv []string) {
 			// rv = append(rv, fmt.Sprintf("Item: %s - error %s\n", vv, err))
 			rv = append(rv, vv)
 		} else if item == "" {
-			fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
+			if mon.logFile != nil {
+				fmt.Fprintf(mon.logFile, "Item: %s - found, no data\n", vv)
+			}
 		} else {
 			if db3 {
 				fmt.Printf("Found %s at %d in set - it's ok, %s\n", vv, ii, godebug.LF())
@@ -419,7 +433,9 @@ func (mon *MonIt) GetStatusOfItemVerbose(extra bool) (rv []ItemStatus, hasChange
 				rv = append(rv, ItemStatus{Name: vv, Status: "down", LongName: longName})
 				up = false
 			} else if item == "" {
-				fmt.Fprintf(os.Stderr, "Item: %s - found, no data\n", vv)
+				if mon.logFile != nil {
+					fmt.Fprintf(mon.logFile, "Item: %s - found, no data\n", vv)
+				}
 				rv = append(rv, ItemStatus{Name: vv, Status: "up", Data: "", LongName: longName})
 			} else {
 				if db3 {
@@ -540,14 +556,18 @@ func (mon *MonIt) AddNewItem(itemName string, ttl uint64) { // xyzzy - additiona
 	// fmt.Printf("AT: %s\n", godebug.LF())
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	// fmt.Printf("AT: %s\n", godebug.LF())
 	var rv ConfigMonitor
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	// fmt.Printf("AT: %s\n", godebug.LF())
@@ -572,7 +592,9 @@ func (mon *MonIt) AddNewItem(itemName string, ttl uint64) { // xyzzy - additiona
 	// fmt.Printf("AT: %s, s=>%s<\n", godebug.LF(), lib.SVarI(rv))
 	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	// fmt.Printf("AT: %s\n", godebug.LF())
@@ -585,7 +607,9 @@ func (mon *MonIt) SetConfig(s string) {
 	defer mon.FreeConn(conn)
 	err := conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 
@@ -598,13 +622,17 @@ func (mon *MonIt) RemoveItem(itemName string) {
 	defer mon.FreeConn(conn)
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	var rv ConfigMonitor
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	if _, ok := rv.Item[itemName]; ok {
@@ -618,13 +646,17 @@ func (mon *MonIt) RemoveItem(itemName string) {
 	}
 	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 
 	err = conn.Cmd("DEL", "monitor::"+itemName).Err
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to remove monitor::%s in redis - that is not good, %s\n", itemName, godebug.LF())
+		}
 		return
 	}
 
@@ -637,13 +669,17 @@ func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]inter
 	defer mon.FreeConn(conn)
 	s, err := conn.Cmd("GET", "monitor:config").Str()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to find the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 	var rv ConfigMonitor
 	err = json.Unmarshal([]byte(s), &rv)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to parse the configuration for MonAliveLib - monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 
@@ -682,7 +718,9 @@ func (mon *MonIt) ChangeConfigOnItem(itemName string, newConfig map[string]inter
 	}
 	err = conn.Cmd("SET", "monitor:config", s).Err
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		if mon.logFile != nil {
+			fmt.Fprintf(mon.logFile, "Unable to save updated configuration to monitor:config in redis - that is not good, %s, %s\n", err, godebug.LF())
+		}
 		return
 	}
 
